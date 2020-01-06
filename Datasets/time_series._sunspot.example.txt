@@ -1,0 +1,253 @@
+
+
+
+
+# Figure 9.8   4 Realizations from BJR AR(2) model for SS data 
+data(sunspot.classic)
+sun2=est.arma.wge(sunspot.classic,p=2)
+s21=gen.arma.wge(n=176,phi=sun2$phi,vara=236,sn=151)+44.78
+s22=gen.arma.wge(n=176,phi=sun2$phi,vara=236,sn=161)+44.78
+s23=gen.arma.wge(n=176,phi=sun2$phi,vara=236,sn=171)+44.78
+s24=gen.arma.wge(n=176,phi=sun2$phi,vara=236,sn=181)+44.78
+numrows <- 2
+numcols <- 2
+timelab <- 'Time'
+valuelab <- ''
+
+filename <- 'c:\\Documents and Settings\\00013961\\My Documents\\My Stuff\\Research\\Time Series Book\\chap 9 figures\\ds.fig9.8.new.tif'
+fig.width <- 5.2
+fig.height <- 3.8
+cex.labs <- c(.8,.7,.8)
+tiff(filename=filename,width=fig.width,height=fig.height,units='in',compression='none',res=350)
+par(mfrow=c(numrows,numcols),mar=c(3.5,2.5,.8,1))
+t<-1:176;
+
+k<-0:10;
+ff<-1:251
+f<-(ff-1)/500
+a.subtitle<-'(a)'
+b.subtitle<-'(b)'
+c.subtitle<-'(c)'
+d.subtitle<-'(d)'
+
+#
+#
+plot(t,s21,type='o',xaxt='n',yaxt='n',cex=0.5,pch=16,cex.lab=.75,cex.axis=.75,lwd=.75,xlab='',ylab='',ylim=c(-90,190))
+axis(side=1,cex.axis=.9,mgp=c(3,0.15,0),tcl=-.3);
+axis(side=2,las=1,cex.axis=.9,mgp=c(3,.4,0),tcl=-.3)
+mtext(side=c(1,2,1),cex=cex.labs,text=c(timelab,valuelab,a.subtitle),line=c(1,1.1,2))
+#
+plot(t,s22,type='o',xaxt='n',yaxt='n',cex=0.5,pch=16,cex.lab=.75,cex.axis=.75,lwd=.75,xlab='',ylab='',ylim=c(-90,190))
+axis(side=1,cex.axis=.9,mgp=c(3,0.15,0),tcl=-.3);
+axis(side=2,las=1,cex.axis=.9,mgp=c(3,.4,0),tcl=-.3)
+mtext(side=c(1,2,1),cex=cex.labs,text=c(timelab,valuelab,b.subtitle),line=c(1,1.1,2))
+#
+plot(t,s23,type='o',xaxt='n',yaxt='n',cex=0.5,pch=16,cex.lab=.75,cex.axis=.75,lwd=.75,xlab='',ylab='',ylim=c(-90,190))
+axis(side=1,cex.axis=.9,mgp=c(3,0.15,0),tcl=-.3);
+axis(side=2,las=1,cex.axis=.9,mgp=c(3,.4,0),tcl=-.3)
+mtext(side=c(1,2,1),cex=cex.labs,text=c(timelab,valuelab,c.subtitle),line=c(1,1.1,2))
+#
+plot(t,s24,type='o',xaxt='n',yaxt='n',cex=0.5,pch=16,cex.lab=.75,cex.axis=.75,lwd=.75,xlab='',ylab='',ylim=c(-90,180))
+axis(side=1,cex.axis=.9,mgp=c(3,0.15,0),tcl=-.3);
+axis(side=2,las=1,cex.axis=.9,mgp=c(3,.4,0),tcl=-.3)
+mtext(side=c(1,2,1),cex=cex.labs,text=c(timelab,valuelab,d.subtitle),line=c(1,1.1,2))
+dev.off()
+
+
+
+
+
+
+
+
+
+# Figure 9.9   4 reAalizations from AR(8) model for SS data 
+sun8=est.arma.wge(sunspot.classic,p=8)
+s81=gen.arma.wge(n=176,phi=sun8$phi,vara=213,sn=938)+44.78
+s82=gen.arma.wge(n=176,phi=sun8$phi,vara=213,sn=939)+44.78
+s83=gen.arma.wge(n=176,phi=sun8$phi,vara=213,sn=940)+44.78
+s84=gen.arma.wge(n=176,phi=sun8$phi,vara=213,sn=941)+44.78
+numrows <- 2
+numcols <- 2
+timelab <- 'Time'
+valuelab <- ''
+
+filename <- 'c:\\Documents and Settings\\00013961\\My Documents\\My Stuff\\Research\\Time Series Book\\chap 9 figures\\ds.fig9.9.new.tif'
+fig.width <- 5.2
+fig.height <- 3.8
+cex.labs <- c(.8,.7,.8)
+tiff(filename=filename,width=fig.width,height=fig.height,units='in',compression='none',res=350)
+par(mfrow=c(numrows,numcols),mar=c(3.5,2.5,.8,1))
+t<-1:176;
+
+k<-0:10;
+ff<-1:201
+f<-(ff-1)/400
+a.subtitle<-'(a)'
+b.subtitle<-'(b)'
+c.subtitle<-'(c)'
+d.subtitle<-'(d)'
+
+#
+#
+plot(t,s81,type='o',xaxt='n',yaxt='n',cex=0.5,pch=16,cex.lab=.75,cex.axis=.75,lwd=.75,xlab='',ylab='',ylim=c(-90,190))
+axis(side=1,cex.axis=.9,mgp=c(3,0.15,0),tcl=-.3);
+axis(side=2,las=1,cex.axis=.9,mgp=c(3,.4,0),tcl=-.3)
+mtext(side=c(1,2,1),cex=cex.labs,text=c(timelab,valuelab,a.subtitle),line=c(1,1.1,2))
+#
+plot(t,s82,type='o',xaxt='n',yaxt='n',cex=0.5,pch=16,cex.lab=.75,cex.axis=.75,lwd=.75,xlab='',ylab='',ylim=c(-90,190))
+axis(side=1,cex.axis=.9,mgp=c(3,0.15,0),tcl=-.3);
+axis(side=2,las=1,cex.axis=.9,mgp=c(3,.4,0),tcl=-.3)
+mtext(side=c(1,2,1),cex=cex.labs,text=c(timelab,valuelab,b.subtitle),line=c(1,1.1,2))
+#
+plot(t,s83,type='o',xaxt='n',yaxt='n',cex=0.5,pch=16,cex.lab=.75,cex.axis=.75,lwd=.75,xlab='',ylab='',ylim=c(-90,190))
+axis(side=1,cex.axis=.9,mgp=c(3,0.15,0),tcl=-.3);9
+axis(side=2,las=1,cex.axis=.9,mgp=c(3,.4,0),tcl=-.3)
+mtext(side=c(1,2,1),cex=cex.labs,text=c(timelab,valuelab,c.subtitle),line=c(1,1.1,2))
+#
+plot(t,s84,type='o',xaxt='n',yaxt='n',cex=0.5,pch=16,cex.lab=.75,cex.axis=.75,lwd=.75,xlab='',ylab='',ylim=c(-90,190))
+axis(side=1,cex.axis=.9,mgp=c(3,0.15,0),tcl=-.3);
+axis(side=2,las=1,cex.axis=.9,mgp=c(3,.4,0),tcl=-.3)
+mtext(side=c(1,2,1),cex=cex.labs,text=c(timelab,valuelab,d.subtitle),line=c(1,1.1,2))
+dev.off()
+
+
+
+
+
+
+
+
+# Figure 9.10   autocorrelation estimates for ss data 
+
+numrows <- 1
+numcols <- 2
+freqlab <- 'Frequency'
+valuelab <- ''
+laglab<-'Lag'
+a.subtitle<-'(a) Sample autocorrelations for AR(2) realizations'
+b.subtitle<-'(b) Sample autocorrelations for AR(9) realizations'
+filename <- 'c:\\Documents and Settings\\00013961\\My Documents\\My Stuff\\Research\\Time Series Book\\chap 9 figures\\ds.fig9.10.new.tif'
+
+t<-1:100;
+k<-0:25
+sun=plotts.sample.wge(sunspot.classic)
+sun.aut=sun$autplt[1:26]
+s21p=plotts.sample.wge(s21)
+aut21=s21p$autplt[1:26]
+s22p=plotts.sample.wge(s22)
+aut22=s22p$autplt[1:26]
+s23p=plotts.sample.wge(s23)
+aut23=s23p$autplt[1:26]
+s24p=plotts.sample.wge(s24)
+aut24=s24p$autplt[1:26]
+
+
+s81p=plotts.sample.wge(s81)
+aut81=s81p$autplt[1:26]
+s82p=plotts.sample.wge(s82)
+aut82=s82p$autplt[1:26]
+s83p=plotts.sample.wge(s83)
+aut83=s83p$autplt[1:26]
+s84p=plotts.sample.wge(s84)
+aut84=s84p$autplt[1:26]
+k<-0:25;
+ff<-1:251
+f<-(ff-1)/500
+#
+#
+fig.width <- 5.5
+fig.height <- 2.3
+cex.labs <- c(.67,.7,.67)
+tiff(filename=filename,width=fig.width,height=fig.height,units='in',compression='none',res=350)
+par(mfrow=c(numrows,numcols),mar=c(3.8,2.5,1,1))
+plot(k,sun.aut,type='o',xaxt='n',yaxt='n',cex=0.65,pch=16,cex.lab=.75,cex.axis=.75,lwd=2,xlab='',ylab='',ylim=c(-1,1))
+axis(side=1,cex.axis=.8,mgp=c(3,0.15,0),tcl=-.3);
+axis(side=2,las=1,cex.axis=.8,mgp=c(3,.4,0),tcl=-.3)
+mtext(side=c(1,2,1),cex=cex.labs,text=c(laglab,valuelab,a.subtitle),line=c(.8,1.1,1.8))
+points(k,aut21,type='o',cex=0.47,pch=1,lwd=.55);
+points(k,aut22,type='o',cex=0.47,pch=1,lwd=.55);
+points(k,aut23,type='o',cex=0.47,pch=1,lwd=.55);
+points(k,aut24,type='o',cex=0.47,pch=1,lwd=.55);
+
+
+plot(k,sun.aut,type='o',xaxt='n',yaxt='n',cex=0.65,pch=16,cex.lab=.75,cex.axis=.75,lwd=2,xlab='',ylab='',ylim=c(-1,1))
+axis(side=1,cex.axis=.8,mgp=c(3,0.15,0),tcl=-.3);
+axis(side=2,las=1,cex.axis=.8,mgp=c(3,.4,0),tcl=-.3)
+mtext(side=c(1,2,1),cex=cex.labs,text=c(laglab,valuelab,b.subtitle),line=c(.8,1.1,1.8))
+points(k,aut81,type='o',cex=0.47,pch=1,lwd=.55);
+points(k,aut82,type='o',cex=0.47,pch=1,lwd=.55);
+points(k,aut83,type='o',cex=0.47,pch=1,lwd=.55);
+points(k,aut84,type='o',cex=0.47,pch=1,lwd=.55);
+dev.off()
+
+
+
+
+
+
+# Figure 9.11   spectral density estimates for ss data 
+numrows <- 1
+numcols <- 2
+freqlab <- 'Frequency'
+valuelab <- ''
+a.subtitle<-'(a) Spectral estimates for AR(2) realizations'
+b.subtitle<-'(b) Spectral estimates for AR(8) realizations'
+filename <- 'c:\\Documents and Settings\\00013961\\My Documents\\My Stuff\\Research\\Time Series Book\\chap 9 figures\\ds.fig9.11.2.ss.tif'
+fig.width <- 5.5
+fig.height <- 2.3
+cex.labs <- c(.67,.7,.67)
+tiff(filename=filename,width=fig.width,height=fig.height,units='in',compression='none',res=350)
+par(mfrow=c(numrows,numcols),mar=c(3.8,2.5,1,1))
+t<-1:100;
+sunspec=parzen.wge(sunspot.classic,plot=FALSE)
+sun.spec=sunspec$pzgram
+#
+spec.21<-parzen.wge(s21,plot=FALSE)
+spec21=spec.21$pzgram
+f=spec.21$freq
+spec.22<-parzen.wge(s22,plot=FALSE)
+spec22=spec.22$pzgram
+spec.23<-parzen.wge(s23,plot=FALSE)
+spec23=spec.23$pzgram
+spec.24<-parzen.wge(s24,plot=FALSE)
+spec24=spec.24$pzgram
+#
+spec.81<-parzen.wge(s81,plot=FALSE)
+spec81=spec.81$pzgram
+spec.82<-parzen.wge(s82,plot=FALSE)
+spec82=spec.82$pzgram
+spec.83<-parzen.wge(s83,plot=FALSE)
+spec83=spec.83$pzgram
+spec.84<-parzen.wge(s84,plot=FALSE)
+spec84=spec.84$pzgram
+#
+#
+#k<-0:10;
+#ff<-1:251
+#f<-(ff-1)/500
+#
+#
+plot(f,sun.spec,type='l',xaxt='n',yaxt='n',cex=0.4,cex.lab=.75,cex.axis=.75,lwd=2,xlab='',ylab='',ylim=c(-25,10))
+axis(side=1,cex.axis=.8,mgp=c(3,0.15,0),tcl=-.3);
+axis(side=2,las=1,cex.axis=.8,mgp=c(3,.4,0),tcl=-.3)
+mtext(side=c(1,2,1),cex=cex.labs,text=c(freqlab,valuelab,a.subtitle),line=c(.8,1.1,1.8))
+points(f,spec21,type='l',cex=0.1,pch=2,lwd=.55);
+points(f,spec22,type='l',cex=0.1,pch=2,lwd=.55);
+points(f,spec23,type='l',cex=0.1,pch=2,lwd=.55);
+points(f,spec24,type='l',cex=0.1,pch=2,lwd=.55);
+
+
+plot(f,sun.spec,type='l',xaxt='n',yaxt='n',cex=0.4,cex.lab=.75,cex.axis=.75,lwd=2,xlab='',ylab='',ylim=c(-25,10))
+axis(side=1,cex.axis=.8,mgp=c(3,0.15,0),tcl=-.3);
+axis(side=2,las=1,cex.axis=.8,mgp=c(3,.4,0),tcl=-.3)
+mtext(side=c(1,2,1),cex=cex.labs,text=c(freqlab,valuelab,b.subtitle),line=c(.8,1.1,1.8))
+points(f,spec81,type='l',cex=0.1,pch=2,lwd=.55);
+points(f,spec82,type='l',cex=0.1,pch=2,lwd=.55);
+points(f,spec83,type='l',cex=0.1,pch=2,lwd=.55);
+points(f,spec84,type='l',cex=0.1,pch=2,lwd=.55);
+dev.off()
+
+
+
+

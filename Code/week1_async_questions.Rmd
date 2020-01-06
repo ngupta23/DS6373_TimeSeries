@@ -1,0 +1,65 @@
+---
+title: "Time Series - Week1"
+author: "Nikhil Gupta"
+date: "January 5, 2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(tswge)
+source("common_functions.R")
+```
+
+# Noctula vs Lavon (Stationarity)
+
+```{r}
+data("noctula")
+plot(noctula)
+acf(noctula[1:48])
+acf(noctula[49:96])
+```
+
+```{r}
+data("lavon") 
+plot(lavon)
+acf(lavon[1:56])
+acf(lavon[57:112])
+```
+
+
+# Whale Dataset (Staionarity)
+
+```{r}
+data("whale")
+plot(whale)
+lines(whale)
+len = length(whale)
+len_by_2 = round(len/2)
+seg_2_start = len_by_2+1
+acf(whale[1:len_by_2])
+acf(whale[seg_2_start:len])
+```
+
+```{r}
+# Checking functionality of function
+check_stationarity(whale)
+```
+
+
+```{r}
+bond = read.csv("../Datasets/10_year_bond_rate_2010-2015.csv")
+head(bond)
+
+check_stationarity(bond$Adj.Close)
+
+```
+
+```{r}
+
+```
+
+

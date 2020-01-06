@@ -1,0 +1,2 @@
+"0","electrictiy = read.csv(""../Datasets/electricity_usage_nikhil_house.csv"")"
+"0","head(electrictiy)"
