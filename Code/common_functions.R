@@ -5,6 +5,7 @@ check_stationarity = function(data, title = "Time Series Plot", xlab = "Time", y
   len = length(data)
   len_by_2 = round(len/2)
   seg_2_start = len_by_2+1
-  acf(data[1:len_by_2])
-  acf(data[seg_2_start:len])
+  acf(data[1:len], main = "Full Dataset")
+  acf(data[1:len_by_2], main = "First Half ACF")
+  acf(data[seg_2_start:len], main = "Second Half ACF")
 }
