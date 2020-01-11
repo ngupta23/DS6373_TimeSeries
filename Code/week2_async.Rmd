@@ -1,0 +1,92 @@
+---
+title: "Time Series - Async Week 2"
+author: "Nikhil Gupta"
+date: "`r Sys.time()`"
+output:
+  word_document:
+    toc: yes
+    toc_depth: '6'
+  html_document:
+    toc: yes
+    toc_depth: 6
+    toc_float: yes
+always_allow_html: yes
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(tswge)
+
+```
+
+```{r}
+data(patemp)
+parzen.wge(patemp)
+```
+
+```{r}
+plotts.sample.wge(patemp)   # Gets the same information in one command
+```
+
+```{r}
+data(airlog)
+plot(airlog, type = 'l')
+plotts.wge(airlog)  # equivalent of the above for plotting
+parzen.wge(airlog)
+parzen.wge(airlog,trunc = 70)
+```
+
+```{r}
+plotts.sample.wge(airlog, trunc = 70) 
+```
+
+```{r}
+data(bat)
+parzen.wge(bat)
+```
+
+```{r}
+plotts.sample.wge(bat)
+```
+
+```{r}
+data(sunspot.classic)
+parzen.wge(sunspot.classic)
+```
+
+```{r}
+plotts.sample.wge(sunspot.classic)
+```
+
+
+```{r}
+#ICC: Estimate the frequency in the Canadian lynx data
+data(llynx)
+parzen.wge(llynx)
+```
+
+```{r}
+plotts.sample.wge(llynx)
+```
+
+
+
+```{r}
+# Amplitude Modulated Signal (Has Carrier Frequency and Modulation Frequency)
+t = seq(1,250)
+y1 = ts(sin(2*pi*0.1*t))
+y2 = ts(1 * sin(2*pi*0.09*t))
+y3 = ts(1 * sin(2*pi*0.11*t))
+plot(y1)
+plot(y2)
+plot(y3)
+
+ysum = y1 + y2 + y3
+plot(ysum)
+
+plotts.sample.wge(ysum, trunc = 200)
+
+```
