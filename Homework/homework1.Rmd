@@ -1,0 +1,65 @@
+---
+title: "Live Session Assignment 1"
+author: "Nikhil Gupta"
+date: "`r Sys.time()`"
+output:
+  word_document:
+    toc: yes
+    toc_depth: '6'
+  html_document:
+    toc: yes
+    toc_depth: 6
+    toc_float: yes
+always_allow_html: yes
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+```{r}
+library(tswge)
+source("../Code/common_functions.R")
+```
+
+# Problem 1.2
+
+```{r}
+data("wtcrude")
+data("patemp")
+```
+
+```{r}
+plotts.sample.wge(wtcrude)
+plotts.sample.wge(patemp)
+```
+
+# Problem 1.5
+
+```{r}
+data("fig1.21a")
+```
+
+```{r}
+plotts.sample.wge(fig1.21a, trunc = 31)  # Plots in dB by default. Use parzen.wge to plot parzen plot with more flexibility
+parzen.wge(fig1.21a, trunc = 31, dbcalc = FALSE)
+parzen.wge(fig1.21a, trunc = 31, dbcalc = TRUE)
+```
+
+
+# Problem 1.6
+
+```{r}
+t = seq(1:100)
+a = rnorm(n = 100, mean = 0, sd = 1)
+X = ts(3*cos(2*pi*0.05*t) + 1.5*cos(2*pi*0.35*t + 2) + a)
+plotts.sample.wge(X)
+```
+
+```{r}
+# Equivalently
+X2 = gen.sigplusnoise.wge(n = 100, coef = c(3,1.5), freq = c(0.05, 0.35), psi = c(0, 2))
+plotts.sample.wge(X)
+```
+
