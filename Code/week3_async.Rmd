@@ -1,0 +1,124 @@
+---
+title: "Time Series - Async Week 3"
+author: "Nikhil Gupta"
+date: "`r Sys.time()`"
+output:
+  word_document:
+    toc: yes
+    toc_depth: '6'
+  html_document:
+    toc: yes
+    toc_depth: 6
+    toc_float: yes
+always_allow_html: yes
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(tswge)
+
+```
+
+```{r}
+data("fig1.21a")
+plotts.wge(fig1.21a)
+```
+
+## Low Pass Filter (5 point Moving Average)
+```{r}
+ma = stats::filter(fig1.21a, rep(1,5))/5
+plot(ma, type = 'l')
+```
+
+## High Pass Filter (Difference Filter)
+```{r}
+dif = diff(fig1.21a, lag = 1)
+plot(dif, type = 'l')
+```
+```{r}
+Realization = gen.sigplusnoise.wge(200, coef = c(5,0), freq = c(.1,0), vara = 10, sn = 1)
+ma = filter(Realization,rep(1,5))/5
+plot(ma, type = 'l')
+```
+
+# AR(1) Models
+```{r}
+?gen.arma.wge
+```
+
+## White Noise using gen.arma.wge
+
+```{r}
+# White Noise
+x = gen.arma.wge(n=1000, phi=c(0,0), theta = c(0,0), vara=1, sn=2)
+parzen.wge(x)  # very close to 0dB (or absolute value of 1) for all frequencies 
+```
+
+## Positive Phi
+```{r}
+gen.arma.wge(n=100, phi = 0.95)
+gen.arma.wge(n=100, phi = 0.95, sn=5)  # reproducible with seed
+```
+
+## Negative Phi
+```{r}
+gen.arma.wge(n=100, phi = -0.95)
+```
+
+## Plotting the true theoretical acf and spectral density
+```{r}
+plotts.true.wge(phi = 0.95)
+plotts.true.wge(phi = -0.95)
+x = gen.arma.wge(n=200, phi=0.95, sn=5)
+plotts.sample.wge(x)  # Not ecactly same as the true values (since this is based on the sample realization) but close enough
+```
+
+## Non Stationaty ARMA models
+```{r}
+gen.arma.wge(n=100, phi=c(0.9999))  # Almost non Stationary
+# gen.arma.wge(n=100, phi=c(1))  # Non Stationary (gives error)
+gen.arima.wge(n=100, d=1)  # ARIMA case (produces similar results to ARMA with Phi1 = 0.9999
+# gen.arma.wge(n=50, phi=c(1.1)) # Non Stationary (gives error)
+
+# Non stationary model with Phi1 = 1.1
+n = 50
+phi1 = 1.1
+x = rep(0,50)
+a = rnorm(n)
+x[1:50] = 0
+for (k in 2:n){
+  x[k] = phi1 * x[k-1] + a[k]
+}
+plotts.wge(x)
+```
+
+# Breakout 1 - Identify 2 frequencies and Isolate 1 of the frequencies
+```{r}
+data =  read.csv('../MSDS-6373-Time-Series/Unit 3/Unit3BOut1Part1.csv')
+p=plotts.sample.wge(data$x)
+xf=tswge::butterworth.wge(data$x,order=4,type='low',cutoff=0.15)
+p=plotts.sample.wge(xf$x.filt)
+```
+
+
+```{r}
+data =  read.csv('../MSDS-6373-Time-Series/Unit 3/Unit3BOut1Part2.csv')
+p=plotts.sample.wge(data$x)
+xf=tswge::butterworth.wge(data$x,order=4,type='pass',cutoff=c(0.1,0.2))
+p=plotts.sample.wge(xf$x.filt)
+```
+
+# Breakout 2
+```{r}
+x = gen.arma.wge(n = 200, phi = -0.8, sn = 101)
+plotts.sample.wge(x)
+```
+
+
+```{r}
+x = gen.arma.wge(n = 200, phi = 0.92, sn = 101)
+plotts.sample.wge(x)
+```

@@ -66,8 +66,78 @@ check_stationarity(bond$Adj.Close)
 
 ```
 
+
+# Estimating the Variance of (the mean) a Stationary Series
+
+# Common Functions
 ```{r}
+calculate_ts_gamma0 = function(x){
+  n = length(x)
+  gamma0 = var(x)*(n-1)/n
+  return(gamma0)
+}
+
+calculate_ts_mean = function(x){
+  return(mean(x))
+}
+
+calculate_ts_var_of_mean = function(x){
+  n=length(x) 
+  nlag=n-1 
+  m=mean(x)
+  v=var(x,na.rm = TRUE)
+  gamma0=calculate_ts_gamma0(x)
+  aut=acf(x,lag.max=nlag) 
+  sum=0
+  for (k in 1:nlag) {
+    sum=sum+(1-k/n)*aut$acf[k+1]*gamma0
+  }
+  
+  vxbar=2*sum/n + gamma0/n 
+  return(vxbar)  
+}
+
+calculate_ts_mean_confidence_interval = function(x, alpha = 0.05){
+  xbar = calculate_ts_mean(x)
+  vxbar = calculate_ts_var_of_mean(x)
+  multiplier = qnorm(1 - alpha/2)
+  ci = c(xbar - multiplier * sqrt(vxbar), xbar +  multiplier * sqrt(vxbar))
+  return(ci)
+}
+
 
 ```
 
+
+```{r}
+#xdf = read.csv(file.choose(),header = TRUE)
+xdf = read.csv("../Datasets/10_year_bond_rate_2010-2015.csv",header = TRUE)
+x = as.numeric(paste(xdf$Adj.Close))
+x = x[!is.na(x)]
+plotts.wge(x = x)
+
+xbar = calculate_ts_mean(x)
+print(xbar)
+vxbar = calculate_ts_var_of_mean(x)
+print(vxbar)
+ci = calculate_ts_mean_confidence_interval(x)
+print(ci)
+
+```
+
+
+
+```{r}
+x = c(4,6,7,5,3)
+
+gamma0 = calculate_ts_gamma0(x)
+print(gamma0)
+xbar = calculate_ts_mean(x)
+print(xbar)
+vxbar = calculate_ts_var_of_mean(x)
+print(vxbar)
+ci = calculate_ts_mean_confidence_interval(x)
+print(ci)
+
+```
 

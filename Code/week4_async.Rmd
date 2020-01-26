@@ -1,0 +1,71 @@
+---
+title: "Time Series - Async Week 4"
+author: "Nikhil Gupta"
+date: "`r Sys.time()`"
+output:
+  word_document:
+    toc: yes
+    toc_depth: '6'
+  html_document:
+    toc: yes
+    toc_depth: 6
+    toc_float: yes
+always_allow_html: yes
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(tswge)
+```
+
+# One Positive One Negative Root
+```{r}
+# X_t - 0.2X_t-1 - 0.48X_t-2  
+phi = c(0.2, 0.48)
+x = gen.arma.wge(200, phi=phi)
+px = plotts.sample.wge(x)
+pt = plotts.true.wge(phi = phi)
+```
+
+# Two Positive Roots
+```{r}
+# X_t - 1.4X_t-1 + 0.48X_t-2  
+phi = c(1.4, -0.48)
+x = gen.arma.wge(200, phi=phi)
+px = plotts.sample.wge(x)
+pt = plotts.true.wge(phi = phi)
+```
+
+# Two Negative Roots
+```{r}
+# X_t + 1.4X_t-1 + 0.48X_t-2  -> (1+0.8B)(1+0.6B)X_t
+phi = c(-1.4, -0.48)
+x = gen.arma.wge(200, phi=phi)
+px = plotts.sample.wge(x)
+pt = plotts.true.wge(phi = phi)
+```
+
+# Factor Tables
+```{r}
+# X_t - 1.95X_t-1 + 1.85X_t-2 - 0.855X_t-3 = a_t
+
+phi = c(1.95, -1.85, .855)
+# Factor Table
+factor.wge(phi=phi)
+
+# Plotting a realization along with true autocorrelations and spectral density
+pt = plotts.true.wge(phi=phi)
+
+```
+
+## Problems 4.9
+
+```{r}
+phi = c(1.59, -0.544, -0.511, 0.222)
+# Factor Table
+factor.wge(phi=phi)
+```
+

@@ -1,0 +1,79 @@
+---
+title: "Live Session Assignment 3"
+author: "Nikhil Gupta"
+date: "`r Sys.time()`"
+output:
+  word_document:
+    toc: yes
+    toc_depth: '6'
+  html_document:
+    toc: yes
+    toc_depth: 6
+    toc_float: yes
+always_allow_html: yes
+---
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(tswge)
+library(dplyr)
+source("common_functions.R")
+```
+
+# Setup
+
+```{r}
+walmart = read.csv("../Datasets/Walmart.csv")
+head(walmart)
+```
+
+```{r}
+stor8_item1 = walmart %>% dplyr::filter(item == 1 & store == 8)
+summary(stor8_item1)
+```
+
+
+* There are some missing values. We will need to impute these
+
+```{r}
+data = ts(stor8_item1$sales)
+sum(is.na(data))  # Check for NA values
+```
+
+# Check Stationarity
+
+```{r}
+check_stationarity(data, title = "Walmart Sales Store 8 Item 1", ylab = "Sales")
+```
+
+# Spectral Density
+```{r}
+p = plotts.sample.wge(data) # can not control the truncation with this, hence use parzen.wge to increase the truncation to see more details
+length(data)
+parzen.wge(data, trunc = 500)  
+```
+
+
+
+# 5-point MA
+```{r}
+five_ma = stats::filter(data, rep(1,5))/5
+five_ma = five_ma[!is.na(five_ma)]
+p = plotts.sample.wge(five_ma)
+```
+
+# 51-point MA
+```{r}
+fiftyone_ma = stats::filter(data, rep(1,50))/50
+fiftyone_ma = fiftyone_ma[!is.na(fiftyone_ma)]
+p = plotts.sample.wge(fiftyone_ma)
+```
+
+```{r}
+
+```
+

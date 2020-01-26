@@ -1,0 +1,89 @@
+---
+title: "Live Session Assignment 4"
+author: "Nikhil Gupta"
+date: "`r Sys.time()`"
+output:
+  word_document:
+    toc: yes
+    toc_depth: '6'
+  html_document:
+    toc: yes
+    toc_depth: 6
+    toc_float: yes
+always_allow_html: yes
+---
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Setup
+
+```{r}
+library(tswge)
+library(dplyr)
+source("common_functions.R")
+```
+
+# Problem 1
+
+```{r}
+phi = c(-0.5, -0.6)
+p = plotts.true.wge(phi = phi)
+factor.wge(phi = phi)
+
+```
+
+# Problem 2
+
+```{r}
+walmart = read.csv("../Datasets/Walmart.csv")
+head(walmart)
+```
+
+```{r}
+stor9_item50 = walmart %>% dplyr::filter(item == 50 & store == 9)
+summary(stor9_item50)
+```
+```{r}
+p = plotts.sample.wge(stor9_item50$sales)
+```
+
+## Model 1 Factors
+```{r}
+phi = c(0.967)
+factor.wge(phi = phi) 
+p = plotts.true.wge(phi = phi)
+```
+
+
+## Model 2 Factors
+```{r}
+phi = c(1.452, -0.453, -0.294, 0.175, 0.237, -0.154)
+factor.wge(phi = phi) 
+p = plotts.true.wge(phi = phi)
+
+```
+
+## Model 3 Factors
+```{r}
+phi = c(1.445, -0.411, -0.038, 0.17, 0.362, -0.245, -0.177, 0.213)
+factor.wge(phi = phi) # Not stationary
+# p = plotts.true.wge(phi = phi)
+```
+
+## Model 4 Factors
+```{r}
+phi = c(1.384, -0.359, -0.309, 0.063, 0.317, -0.14, -0.0587, -0.199, 0.2877)
+factor.wge(phi = phi) 
+p = plotts.true.wge(phi = phi)
+```
+
+```{r}
+x = gen.arma.wge(n = 200, phi = phi, sn = 101)
+p = plotts.sample.wge(x)
+xc = butterworth.wge(x, order = 4, type = "stop", cutoff = c(0.05, 0.11))
+p = plotts.sample.wge(xc$x.filt)
+
+```
