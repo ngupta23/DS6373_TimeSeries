@@ -1,0 +1,131 @@
+---
+title: "Homework 3"
+author: "Nikhil Gupta"
+date: "`r Sys.time()`"
+output:
+  word_document:
+    toc: yes
+    toc_depth: '6'
+  html_document:
+    toc: yes
+    toc_depth: 6
+    toc_float: yes
+always_allow_html: yes
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Setup
+
+```{r}
+library(tswge)
+source("../Code/common_functions.R")
+```
+
+
+# Problem 2.1
+
+
+```{r}
+x = gen.sigplusnoise.wge(n = 100, coef = c(3,1.5), freq = c(0.05, 0.35), psi = c(0, 2))
+p = plotts.sample.wge(x)
+```
+
+## 2.1a
+```{r}
+xa = butterworth.wge(x, order = 3, type = "low", cutoff = c(.2))
+p = plotts.sample.wge(xa$x.filt)
+```
+
+
+## 2.1b
+```{r}
+xb = butterworth.wge(x, order = 3, type = "high", cutoff = c(.2))
+p = plotts.sample.wge(xb$x.filt)
+```
+
+## 2.1c
+```{r}
+xc = butterworth.wge(xb$x.filt, order = 3, type = "low", cutoff = c(.2))
+p = plotts.sample.wge(xc$x.filt)
+```
+
+# 2.3
+```{r}
+dif = diff(x, lag = 1)
+p = plotts.sample.wge(dif)
+```
+
+# Extra Problem
+
+```{r}
+# 5 point MA
+ma = stats::filter(x, rep(1,5))/5
+p = plotts.sample.wge(na.omit(ma))
+```
+
+
+# 3.4
+
+```{r}
+x_0.9  = gen.arma.wge(n=200, phi=c(0.9), vara=1, sn=2)
+x_0.9m = gen.arma.wge(n=200, phi=c(-0.9), vara=1, sn=2)
+x_0.5  = gen.arma.wge(n=200, phi=c(0.5), vara=1, sn=2)
+x_0.5m = gen.arma.wge(n=200, phi=c(-0.5), vara=1, sn=2)
+```
+
+## a & b
+
+```{r}
+p_0.9  = plotts.true.wge(n = 200, phi = 0.9)
+p_0.9m = plotts.true.wge(n = 200, phi = -0.9)
+p_0.5  = plotts.true.wge(n = 200, phi = 0.5)
+p_0.5m = plotts.true.wge(n = 200, phi = -0.9)
+
+```
+
+## c
+
+```{r}
+calculate_ar1_varx(phi = 0.9, vara = 1)
+calculate_ar1_varx(phi = -0.9, vara = 1)
+calculate_ar1_varx(phi = 0.5, vara = 1)
+calculate_ar1_varx(phi = -0.5, vara = 1)
+
+# Alternatively
+p_0.9$acv[1]
+p_0.9m$acv[1]
+p_0.5$acv[1]
+p_0.5m$acv[1]
+
+# Note that the below is the variance of the mean not the sigma_x for the realixation
+# calculate_ts_var_of_mean(x_0.9)
+# calculate_ts_var_of_mean(x_0.9m)
+# calculate_ts_var_of_mean(x_0.5)
+# calculate_ts_var_of_mean(x_0.5m)
+```
+
+## d
+
+```{r}
+# Done above already
+```
+
+## e
+
+```{r}
+acf(x_0.9)
+acf(x_0.9m)
+acf(x_0.5)
+acf(x_0.5m)
+```
+
+## f
+
+```{r}
+x_0.9_var10 = gen.arma.wge(n=200, phi=c(0.9), vara=10, sn=2)
+p = plotts.true.wge(n=200, phi = 0.9, vara = 10)
+p$acv[1]
+```

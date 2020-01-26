@@ -1,0 +1,127 @@
+---
+title: "Homework 4"
+author: "Nikhil Gupta"
+date: "`r Sys.time()`"
+output:
+  word_document:
+    toc: yes
+    toc_depth: '6'
+  html_document:
+    toc: yes
+    toc_depth: 6
+    toc_float: yes
+always_allow_html: yes
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Setup
+
+```{r}
+library(tswge)
+source("../Code/common_functions.R")
+```
+
+
+# Problem 3.2a
+
+## a
+```{r}
+phi = c(0.95)
+x = gen.arma.wge(n=200, phi = phi, sn = 101)
+px = plotts.sample.wge(x)
+```
+
+## b & c
+```{r}
+pt = plotts.true.wge(phi = phi)
+```
+
+## d
+```{r}
+muX = 0  # from the equation, we can see that it is of the 0 mean form
+varX = pt$acv[1]
+
+print(paste0("Mean of X: ", muX))
+print(paste0("Var of X : ", varX))
+print(paste0("Var of X (alternatively): ", calculate_arp_varx(phi = phi, p = pt, vara = 1)))
+ 
+```
+
+## e
+```{r}
+# Since the model is stationary, we can use all the data to compute mean and variance
+muX_est  = mean(x)
+varX_est = var(x)
+
+print(paste0("Est. Mean of X: ", muX_est))
+print(paste0("Est. Var of X : ", varX_est))
+
+```
+
+
+# Problem 3.2b
+
+## a
+```{r}
+phi = c(1.5, -0.9)
+x = 10 + gen.arma.wge(n=200, phi = phi, sn = 101, plot = FALSE)
+px = plotts.sample.wge(x)
+factor.wge(phi)
+```
+
+## b & c
+```{r}
+pt = plotts.true.wge(phi = phi)
+```
+
+## d
+```{r}
+muX = 10  # from the equation, we can see that it is of the 0 mean form
+varX = pt$acv[1]
+
+print(paste0("Mean of X: ", muX))
+print(paste0("Var of X : ", varX))
+print(paste0("Var of X (alternatively): ", calculate_arp_varx(phi = phi, p = pt, vara = 1)))
+
+
+```
+
+## e
+```{r}
+# Since the model is stationary, we can use all the data to compute mean and variance
+muX_est  = mean(x)
+varX_est = var(x)
+
+print(paste0("Est. Mean of X: ", muX_est))
+print(paste0("Est. Var of X : ", varX_est))
+
+```
+
+# 3.3
+
+## a
+```{r}
+phi = c(1.55, -1, 0.25)
+factor.wge(phi)
+# Stationary 
+```
+
+## b
+```{r}
+phi = c(2, -1.76, 1.6, -0.77)
+factor.wge(phi)
+# Non Stationary 
+```
+
+## d
+```{r}
+phi = c(1.9, -2.3, 2, -1.2, 0.4)
+factor.wge(phi)
+# Stationary 
+```
+
+
+
