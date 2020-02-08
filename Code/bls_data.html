@@ -250,12 +250,15 @@ div.tocify {
 
 <h1 class="title toc-ignore">BLS Data</h1>
 <h4 class="author">Nikhil Gupta</h4>
-<h4 class="date">2020-02-07 21:17:53</h4>
+<h4 class="date">2020-02-07 21:22:36</h4>
 
 </div>
 
 
-<p>Data from BLS website using code from Code from Jonathan Regenstein <a href="https://www.linkedin.com/posts/jkregenstein_rstudio-data-quantitativefinance-activity-6631663823331880960-gM4v/" class="uri">https://www.linkedin.com/posts/jkregenstein_rstudio-data-quantitativefinance-activity-6631663823331880960-gM4v/</a></p>
+<ul>
+<li>Data from BLS website using code from Jonathan Regenstein</li>
+<li><a href="https://www.linkedin.com/posts/jkregenstein_rstudio-data-quantitativefinance-activity-6631663823331880960-gM4v/" class="uri">https://www.linkedin.com/posts/jkregenstein_rstudio-data-quantitativefinance-activity-6631663823331880960-gM4v/</a></li>
+</ul>
 <div id="setup" class="section level1">
 <h1>Setup</h1>
 <pre class="r"><code>library(tswge)
@@ -410,7 +413,7 @@ $(document).ready(function ()  {
 
     // establish options
     var options = {
-      selectors: "h1,h2,h3,h4,h5,h6",
+      selectors: "h1,h2,h3",
       theme: "bootstrap3",
       context: '.toc-content',
       hashGenerator: function (text) {

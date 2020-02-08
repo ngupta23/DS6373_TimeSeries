@@ -5,7 +5,7 @@ date: "`r Sys.time()`"
 output:
   html_document:
     toc: yes
-    toc_depth: 6
+    toc_depth: 3
     toc_float: yes
   word_document:
     toc: yes
@@ -13,8 +13,8 @@ output:
 always_allow_html: yes
 ---
 
-Data from BLS website using code from Code from Jonathan Regenstein
-https://www.linkedin.com/posts/jkregenstein_rstudio-data-quantitativefinance-activity-6631663823331880960-gM4v/
+* Data from BLS website using code from Jonathan Regenstein
+* https://www.linkedin.com/posts/jkregenstein_rstudio-data-quantitativefinance-activity-6631663823331880960-gM4v/
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
