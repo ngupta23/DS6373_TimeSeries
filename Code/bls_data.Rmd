@@ -7,6 +7,9 @@ output:
     toc: yes
     toc_depth: 3
     toc_float: yes
+  pdf_document:
+    toc: yes
+    toc_depth: '6'
   word_document:
     toc: yes
     toc_depth: '6'
@@ -86,7 +89,7 @@ px = plotts.sample.wge(dif2)
 * Looks like the residual is an MA model with q = 1 (since ACF from lag = 2 onwards is almost 0)
 * Let's confirm this by finding the best fit for this residual based on AIC.
 
-## Checknig Residuals
+## Checking Residuals
 ```{r}
 aic5.wge(dif2)
 ```
