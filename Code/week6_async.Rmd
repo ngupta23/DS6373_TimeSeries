@@ -1,0 +1,294 @@
+---
+title: "Time Series - Async Week 6"
+author: "Nikhil Gupta"
+date: "`r Sys.time()`"
+output:
+  word_document:
+    toc: yes
+    toc_depth: '6'
+  html_document:
+    toc: yes
+    toc_depth: 6
+    toc_float: yes
+always_allow_html: yes
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(tswge)
+```
+
+# Signal + Noise Models
+```{r}
+?gen.sigplusnoise.wge
+```
+
+## Linear Signal + White Noise
+```{r}
+xt = gen.sigplusnoise.wge(n = 100,
+                          b0 = 2, b1 = 4, # Linear Trend
+                          vara = 100, # White Noise
+                          sn = 101)  
+```
+
+## Just White Noise (No Signal)
+```{r}
+xt = gen.sigplusnoise.wge(n = 100,
+                          b0 = 0, b1 = 0, # No Trend (signal)
+                          vara = 10, # White Noise
+                          sn = 101) 
+```
+
+## Just AR Noise (No Signal)
+```{r}
+xt = gen.sigplusnoise.wge(n = 100,
+                          b0 = 0, b1 = 0, # No Trend (signal)
+                          phi = 0.975, vara = 10, # AR(1) Noise
+                          sn = 101)
+# Note that the wandering behavior can create a realization that looks like trend even though it is not trend.
+```
+
+## Periodic Signal
+```{r}
+# Xt = 5*cos(2*pi*0.1*t + 0.25) + Zt where Zt ~ AR(1)
+xt = gen.sigplusnoise.wge(n = 100,
+                          coef = c(5,0), freq = c(0.1, 0), psi = c(0.25,0), # Periodic Signal
+                          phi = 0.975, vara = 4, # AR(1) Noise
+                          sn = 101)
+```
+
+# AR(4) model compared to Global Temperature
+```{r}
+# Model in factored form: (1 - 0.975B)(1 - 0.2B + 0.45B2)(1 + 0.53B)*Xt = at
+# Note that you feed in the phi values (note the sign)
+parms = mult.wge(c(0.975), c(0.2,-0.45), c(-0.53))
+parms$model.coef
+
+# Check
+factor.wge(phi = parms$model.coef)
+
+#Now that we have the coefficients, () we can generate a realization.
+xt = gen.arma.wge(160,
+                  phi = parms$model.coef, vara = 1, # AR(4) Noise term
+                  sn = 101)
+```
+
+# ARIMA Models
+
+## Realization
+```{r}
+# ARIMA(0,1,0)
+x1=gen.arima.wge(n = 200, d = 1)
+px = plotts.sample.wge(x1)
+
+# ARIMA(2,1,0)
+x2=gen.arima.wge(n = 200, phi = c(1.5, -0.8), d = 1)
+px = plotts.sample.wge(x2)
+
+# ARIMA(2,2,1)
+x3=gen.arima.wge(n = 200, phi = c(1.5,-0.8), d = 2, theta = -0.8)
+px = plotts.sample.wge(x3)
+
+```
+
+## Make Stationary (Differencing)
+
+```{r}
+
+# the following command differences the data in x
+# y = artrans.wge(x, phi.tr = 1)
+# This simply means that y(i) = x(i) – x(i-1)
+# y has length n-1 because x(1) has no x(0) before it.
+# Example
+
+x = c(1,3,6,10,25)
+y = artrans.wge(x, phi.tr = 1)
+y # shows the 4 differences
+```
+
+# Seasonal Models (ARUMA)
+
+## Realization (Quarterly)
+
+```{r}
+# (1 - B^4)Xt = at
+x1 = gen.aruma.wge(n = 80, s = 4, sn = 6)
+px = plotts.sample.wge(x1)
+# ACF repeats every 4 (4, 8, 12, 16)
+# Spectral Densitiy shows peaks at f = 0, 0.25 and 0.5
+
+# (1-B+0.6B^2)(1 - B^4)Xt = (1+0.5B)at
+phi = c(1,-.6)
+theta = -0.5
+factor.wge(phi = phi)
+factor.wge(phi = theta)
+
+x2 = gen.aruma.wge(n = 80, phi = phi, s = 4, theta = theta, sn = 6)
+px = plotts.sample.wge(x2)
+# ACF repeats every 4 (4, 8, 12, 16)
+# Spectral Densitiy shows peaks at f = 0, 0.25 but not so much at 0.5
+# since this is getting cancelled by the MA term
+# Also previously, there was a low value at 0.13, but now due to the 
+# AR component, there is a much hgher value at this frequency.
+```
+
+## Realization (Monthly)
+
+```{r}
+
+# (1 - B^12)Xt = at
+x3 = gen.aruma.wge(n = 180, s = 12, sn = 6)
+px = plotts.sample.wge(x3,lag.max = 48)
+# ACF repeats every 12 (12, 24, 36, 48)
+# Spectral Densitiy shows 5 peaks between f = 0 and 0.5
+
+# (1-B+0.6B^2)(1 - B^12)Xt = (1+0.5B)at
+x4 = gen.aruma.wge(n = 180, phi = phi, s = 12, theta = theta, sn = 6)
+px = plotts.sample.wge(x4,lag.max = 48)
+# ACF repeats every 12 (12, 24, 36, 48)
+# Spectral Densitiy shows 5 peaks between f = 0 and 0.5.
+# However, the dB value at f = 0.13 has increased due to the peak from the AR term
+# and at f = 0.5 has decreased due to te dip from the MA term
+
+```
+
+## Make Stationary (Differencing)
+
+### Quarterly
+```{r}
+x = gen.aruma.wge(n = 80, s = 4, sn = 81) #tswge function to generate ARIMA and Seasonal Models
+dif = artrans.wge(x = x, phi.tr = c(0,0,0,1)) #Take out the (1-B^4)
+aic5.wge(dif) #Check the structure of the noise
+```
+
+### Monthly
+```{r}
+phi = c(.4,.6,-.74)
+theta = c(-.7)
+
+factor.wge(phi = phi)
+factor.wge(phi = theta)
+
+x = gen.aruma.wge(n = 80, phi = phi, theta = theta, s=12, sn = 31)
+dif = artrans.wge(x = x, phi.tr = c(rep(0,11),1)) #Take out the (1-B^12)
+aic5.wge(dif) #Check the structure of the noise
+```
+
+## Factoring
+```{r}
+# Factor Table
+s = 4; factor.wge(c(rep(0,s-1), 1))   # Quarterly
+s = 12; factor.wge(c(rep(0,s-1), 1))  # Monthly
+s = 5; factor.wge(c(rep(0,s-1), 1))   # Seasonality every 5 time periods
+
+
+# factoring 1
+phi = c(-0.2, 0.4, 0.49, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0.2, -0.4, -0.49)
+factor.wge(phi = phi)
+
+# factoring 2
+phi = c(-0.3, 0.8, 0 , 0, 1, 0.3, -0.8)
+factor.wge(phi = phi)
+
+```
+
+# More General Seasonal Model
+
+## Airline Data
+```{r}
+data(airlog)
+px = plotts.sample.wge(airlog)
+# Slowly decaying ACF --> ARIMA
+# Spectral Densirty shows yearly seasonality (5 peaks between f = 0 and f = 0.5)
+```
+
+
+```{r}
+# take first differences of the data
+SA1 = artrans.wge(x = airlog, phi.tr = 1) 
+
+# take the 12th difference of the data (1-B12)
+SA12 = artrans.wge(x = airlog, phi.tr = c(rep(0,11),1))
+
+# take the 12th difference of the first difference (1-B)(1-B12)
+SA1_12 = artrans.wge(x = SA1, phi.tr = c(rep(0,11),1)) 
+```
+
+```{r}
+Parzen = aic.wge(SA12, p = 13) # Phi(B)(1-B12)(Xt-mu) = at
+Box = aic.wge(SA1_12, q = 13) # (1-B)(1-B12)(Xt-mu) = Theta(B)at
+WoodwardAndGray = aic.wge(SA1_12, p = 12) # Phi(B)(1-B)(1-B12)(Xt-mu) = at
+
+Parzen$value
+Box$value
+WoodwardAndGray$value
+
+# We will return to this competition when we use the model to forecast!
+```
+
+```{r}
+Nikhil = aic5.wge(SA1_12, p = 0:15, q = 0:15)
+Nikhil  # Matches top one from Dr. Box
+```
+
+# Async
+
+```{r}
+phi = c(0.6, -0.8)
+theta = -0.3
+xt = gen.arima.wge(n = 500, phi = phi, d = 2, theta = theta, sn = 37)
+
+# 2
+factor.wge(phi = phi)
+
+# 3
+px = parzen.wge(xt)
+```
+
+```{r}
+phi = c(0.6, -0.8)
+theta = -0.3
+xt = gen.arima.wge(n = 500, phi = phi, d = 2, theta = theta, sn = 35)
+
+first_diff = artrans.wge(xt, phi.tr = 1)
+second_diff = artrans.wge(first_diff, phi.tr = 1)
+
+aic5.wge(second_diff)
+
+```
+
+```{r}
+phi = c(0.6, -0.94)
+theta = -0.3
+xs = gen.aruma.wge(n = 200, phi = phi, s = 6, theta = theta, sn = 19)
+px = plotts.sample.wge(xs)
+```
+
+```{r}
+phi = c(0.6, -0.8)
+theta = c(0.3, -0.7)
+s = 12
+
+xt = gen.aruma.wge(n = 500, phi = phi, theta = theta, s = s, sn = 37)
+dif = artrans.wge(x = xt, phi.tr = c(rep(0,s-1),1))
+# dif1 = artrans.wge(x = dif, phi = 1)
+# dif2 = artrans.wge(x = dif1, phi = 1)
+aic5.wge(x = dif)
+```
+
+```{r}
+phi = c(-0.5, 0.2, 0, 1, 0.5, -0.2)
+factor.wge(phi = phi)
+
+phi = c(-0.3, 1.2, 0.4, 0, 0.5, 0, 0, 0, 0 ,0, 0, 1, 0.3, -1.2, -0.4)
+factor.wge(phi = phi)
+```
+
+
+```{r}
+
+```
+

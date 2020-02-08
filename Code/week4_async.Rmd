@@ -61,6 +61,15 @@ pt = plotts.true.wge(phi=phi)
 
 ```
 
+## Positive Phi2
+
+```{r}
+factor.wge(phi = c(0.1, 1))
+# AR(2) with positive Phi2 will always have real roots, since -4AC will become positive
+# In AR(2), we get a frequency between 0 and 0.5 only if Phi2 is negative
+```
+
+
 ## Problems 4.9
 
 ```{r}
@@ -68,4 +77,5 @@ phi = c(1.59, -0.544, -0.511, 0.222)
 # Factor Table
 factor.wge(phi=phi)
 ```
+
 

@@ -1,0 +1,127 @@
+---
+title: "Live Session Assignment 5"
+author: "Nikhil Gupta"
+date: "`r Sys.time()`"
+output:
+  word_document:
+    toc: yes
+    toc_depth: '6'
+  html_document:
+    toc: yes
+    toc_depth: 6
+    toc_float: yes
+always_allow_html: yes
+---
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Setup
+
+```{r}
+library(tswge)
+library(dplyr)
+source("common_functions.R")
+```
+
+
+# For pre-live
+
+```{r}
+electrictiy = read.csv("../Datasets/electricity_usage_nikhil_house.csv")
+head(electrictiy)
+```
+
+```{r}
+sum(is.na(electrictiy$Usage))
+```
+
+
+* There are some missing values. We will need to impute these
+
+```{r}
+data = ts(electrictiy$Usage, frequency = 12, start = c(2009, 12))
+
+library(imputeTS)
+data = imputeTS::na_interpolation(data, option = 'spline')
+data
+```
+
+```{r}
+px = plotts.sample.wge(data)
+grid = aic5.wge(data, p = 0:10)
+grid
+```
+
+
+# For Breakout
+## Slide 1
+
+```{r}
+walmart = read.csv("../Datasets/Walmart.csv")
+head(walmart)
+```
+
+```{r}
+stor9_item50 = walmart %>% dplyr::filter(item == 50 & store == 9)
+summary(stor9_item50)
+```
+
+```{r}
+px = plotts.sample.wge(stor9_item50$sales)
+pz = parzen.wge(stor9_item50$sales, trunc = 1000)
+```
+
+
+```{r}
+# At least 8 peaks, so we will increase p
+grid = aic5.wge(data, p = 0:10)
+grid
+```
+
+## Slide 4
+```{r}
+# AR factors
+phi = c(.3,.9,.1,-.8075)
+factor.wge(phi = phi) # Peaks at these frequencies
+
+# MA factors
+theta = c(-.9,-.8,-.72)
+factor.wge(phi = theta)  # Dips at these frequencies
+
+# ARMA
+x = gen.arma.wge(n=200, phi = phi, theta = theta, sn = 101)
+px_arma = plotts.sample.wge(x)
+```
+
+
+```{r}
+data = read.csv("../Datasets/swadelay.csv")
+str(data)
+```
+
+
+```{r}
+x = data$arr_cancelled
+px = plotts.sample.wge(x)
+```
+
+```{r}
+# Lots of Peaks and a few dips, so we will increase the limits
+grid = aic5.wge(x, p = 0:15, q = 0:5)
+grid
+```
+
+# Live Session
+
+# Breakout 2
+```{r}
+theta = c(0.8, -0.5)
+pt = plotts.true.wge(theta = theta)
+pt$aut1
+```
+
+
+

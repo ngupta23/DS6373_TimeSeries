@@ -1,0 +1,202 @@
+---
+title: "Time Series - Async Week 5"
+author: "Nikhil Gupta"
+date: "`r Sys.time()`"
+output:
+  word_document:
+    toc: yes
+    toc_depth: '6'
+  html_document:
+    toc: yes
+    toc_depth: 6
+    toc_float: yes
+always_allow_html: yes
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(tswge)
+```
+
+# MA(1) 
+
+## Negative Theta
+```{r}
+theta = c(-0.99)
+x = gen.arma.wge(n=100, theta=theta, sn=5)
+px = plotts.sample.wge(x)
+pt = plotts.true.wge(theta = theta)
+```
+
+## Positive Theta
+```{r}
+theta = c(0.99)
+x = gen.arma.wge(n=100, theta=theta, sn=5)
+px = plotts.sample.wge(x)
+pt = plotts.true.wge(theta = theta)
+```
+
+# MA(2) 
+```{r}
+theta = c(.9,-.4)
+x = gen.arma.wge(n=100,theta=theta)
+px = plotts.sample.wge(x)
+pt = plotts.true.wge(theta = theta)
+```
+
+# Investigating dips
+```{r}
+# AR(2): X_t - 1.1*X_t-1 + 0.9*X_t-2= a_t
+phi = c(1.1, -0.9)
+pt = plotts.true.wge(phi = phi)
+factor.wge()
+
+# MA(2): X_t = a_t - 1.1*a_t-1 +.9*a_t-2
+pt = plotts.true.wge(theta=c(1.1,-.9))
+# Dip is at the same frequency in which you would have had a peak in the equivalent AR(p) model
+```
+
+# Invertibility
+
+```{r}
+# MA(2): X_t = a_t -1.6*a_t-1 + 0.9*a_t-2
+factor.wge(phi=c(1.6, -0.9))  # Invertible (Abs Reciprocal < 1)
+
+# MA(2): X_t = a_t -1.6*a_t-1 - 0.9*a_t-2
+factor.wge(phi=c(1.6, 0.9))   # Non Invertible
+
+# Although we are using phi, it is referring to theta. 
+# Bit note that the System Frequency here is the frequency of the dip (not peak).
+```
+
+# Blend of AR and MA models
+```{r}
+# AR factors
+phi = c(.3,.9,.1,-.8075)
+par = plotts.true.wge(phi = phi)
+factor.wge(phi = phi)
+
+# MA factors
+theta = c(-.9,-.8,-.72)
+pma = plotts.true.wge(theta = theta)
+factor.wge(phi = theta) # just to get the frequency for the dips
+
+# ARMA
+parma = plotts.true.wge(phi = phi, theta = theta)
+```
+
+# AIC
+```{r}
+?aic.wge
+?aic5.wge
+```
+
+```{r}
+data(llynx)
+```
+
+```{r}
+px = plotts.sample.wge(llynx)
+grid = aic5.wge(llynx)
+grid
+```
+
+
+```{r}
+SWA = read.csv("../Datasets/swadelay.csv")
+x = SWA$arr_delay
+
+px = plotts.sample.wge(x)
+# 2 peaks between 0 and 0.5, 1 peak at 0, peak at 0 domiates which also shows on the ACF plots
+# 1 dip between 0 and 0.5
+# Hence ARMA(5,2) might be good.
+aic5.wge(x)
+```
+
+
+# Psi Weights
+```{r}
+# psi0 = 1 in all cases
+# tswge gives values from psi1 onwards
+
+# psi-weights for simple MA(1) model X(t)=(1-.8B)a(t)
+psi.weights.wge(theta=.5,lag.max=5)
+
+# psi-weights for simple AR(1) model (1-.8B)X(t)=a(t)
+psi.weights.wge(phi=.8,lag.max=5) #note that psi(j)=.8j
+
+# psi-weights for ARMA(1,1) model combination of above 2
+psi.weights.wge(phi=c(0.8),theta=c(0.5),lag.max=5)
+```
+
+
+```{r}
+# psi-weights for ARMA(2,1) model (1-1.2B+.6B2)X(t)=(1-.5B)a(t)
+psi.weights.wge(phi=c(1.2,-.6),theta=c(.5),lag.max=5)
+
+# AR(2) model (another example)
+psi.weights.wge(phi=c(.8, -0.5),lag.max=5)
+
+```
+
+
+
+# Async questions
+
+```{r}
+theta = c(-0.1, 0.3)
+pt = plotts.true.wge(theta = theta)
+```
+
+```{r}
+theta = c(-0.1, 0.3)
+pt = plotts.true.wge(theta = theta)
+```
+
+```{r}
+factor.wge(phi=c(-0.1, 0.3))
+
+```
+
+```{r}
+factor.wge(phi = c(-0.1, -0.82, 1.6))
+factor.wge(phi = c(1.95, -1.9, 1.6))
+```
+
+```{r}
+phi = c(.1, -0.5, 0.7)
+par = plotts.true.wge(phi = phi)
+factor.wge(phi = phi)
+
+# MA factors
+theta = c(0.72, -.8)
+pma = plotts.true.wge(theta = theta)
+factor.wge(phi = theta) # just to get the frequency for the dips
+
+# ARMA
+parma = plotts.true.wge(phi = phi, theta = theta)
+```
+
+```{r}
+SWA = read.csv("../Datasets/swadelay.csv")
+x = SWA$weather_delay
+
+px = plotts.sample.wge(x) # At least 4 peaks between 0 and 0.5 and a dip at 0.5
+aic5.wge(x)
+```
+
+More Detailed
+```{r}
+aic5.wge(x, p = 4:10)
+```
+
+```{r}
+phi = c(1.95, -1.9)
+psi.weights.wge(phi = phi, lag.max = 5)
+```
+
+
+

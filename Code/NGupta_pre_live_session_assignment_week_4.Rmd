@@ -85,5 +85,17 @@ x = gen.arma.wge(n = 200, phi = phi, sn = 101)
 p = plotts.sample.wge(x)
 xc = butterworth.wge(x, order = 4, type = "stop", cutoff = c(0.05, 0.11))
 p = plotts.sample.wge(xc$x.filt)
+```
 
+# Breakout 4
+```{r}
+phi = c(0.15, -0.4)
+factor.wge(phi = phi) 
+p = plotts.true.wge(phi = phi)
+```
+
+```{r}
+phi = c(-0.15, -0.4)
+factor.wge(phi = phi) 
+p = plotts.true.wge(phi = phi)
 ```

@@ -51,11 +51,11 @@ calculate_ar1_varx = function(phi, vara=1){
   return (vara/(1 - phi^2))
 } 
 
-calculate_arp_varx = function(phi, p, vara = 1){
+calculate_arp_varx = function(phi, pt, vara = 1){
   # Computes SigmaX^2 = vara/(1-phi1*rho1 - phi2*rho2 - ...)
   sum = 0
   for (i in 1:length(phi)){
-    sum = sum + phi[i] * p$aut1[i+1]
+    sum = sum + phi[i] * pt$aut1[i+1]
   }
   
   return (vara / (1 - sum))
