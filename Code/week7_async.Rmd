@@ -1,0 +1,266 @@
+---
+title: "Time Series - Async Week 7"
+author: "Nikhil Gupta"
+date: "`r Sys.time()`"
+output:
+  html_document:
+    toc: yes
+    toc_depth: 6
+    toc_float: yes
+  word_document:
+    toc: yes
+    toc_depth: '6'
+always_allow_html: yes
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(tswge)
+library(tidyverse)
+```
+
+# Forecasting AR(p) models
+
+## AR(1) {.tabset .tabset-fade}
+
+### Positive Phi
+```{r}
+data(fig6.1nf)
+phi = 0.8
+f = fore.arma.wge(fig6.1nf, phi = phi, n.ahead = 20, plot = TRUE, limits = FALSE)
+# These commands plot the realization and the n.ahead=20 forecasts. 
+# The values of the forecasts are in $f of the output.
+```
+
+### Negative Phi
+
+```{r}
+phi = -0.8
+x1 = gen.arma.wge(n = 100, phi = phi)
+f = fore.arma.wge(x = x1, phi = phi, n.ahead = 20, plot = TRUE, limits = FALSE)
+```
+
+##
+
+## AR(2)
+```{r}
+x2=gen.arma.wge(n=75,phi=c(1.6,-.8),sn=24)
+x2=x2+25
+f = fore.arma.wge(x2, phi=c(1.6,-.8), n.ahead=20, limits=FALSE)
+```
+
+# Forecasting ARMA(p,q)
+```{r}
+# AR(2)
+x2=gen.arma.wge(n=75, phi=c(1.6,-0.8), sn=24)
+f = fore.arma.wge(x2, phi=c(1.6,-0.8), n.ahead=20, limits=FALSE)
+
+# AR(2,1)
+f = fore.arma.wge(x2, phi=c(1.6,-0.8), theta = -0.9, n.ahead=20, limits=FALSE)
+
+# AR(1,1)
+f = fore.arma.wge(x2, phi=c(0.8), theta = -0.9, n.ahead=20, limits=FALSE)
+```
+
+## Canadian Lynx
+```{r}
+data("llynx")
+plotts.wge(llynx)
+```
+
+```{r}
+n.ahead = 20
+
+phi = c(1.3, -0.7, 0.1,  -0.2)
+f = fore.arma.wge(llynx, phi = phi, n.ahead = n.ahead, limits = FALSE)
+
+phi = c(1.3, -0.7, 0.1,  -0.2)
+theta = -0.6
+f = fore.arma.wge(llynx, phi = phi, theta = -0.6, n.ahead = n.ahead, limits = FALSE)
+
+phi = c(1.1676, -0.5446, 0.2662, -0.3094, 0.1540, -0.1463, 0.0569, -0.0294, 0.1346, 0.2021, -0.3394)
+f = fore.arma.wge(llynx, phi = phi, n.ahead = n.ahead, limits = FALSE)
+```
+
+# Confidence Intervals
+
+## Calculatig Psi Weights
+```{r}
+psi.weights.wge(phi = c(1.2, -0.6), theta = 0.5, lag.max = 5)
+```
+
+## Probability Limits
+```{r}
+# AR(1)
+data(fig6.1nf)
+f = fore.arma.wge(fig6.1nf, phi=0.8, n.ahead=20, plot=TRUE, limits=TRUE)
+
+#ARMA(2,1)
+data(fig6.2nf)
+f = fore.arma.wge(fig6.2nf, phi=c(1.2,-0.6), theta=0.5, n.ahead=20, plot=TRUE, limits=TRUE)
+
+```
+
+# Checking Forecasts
+
+## ASE
+```{r}
+data(llynx)
+n = length(llynx)
+
+# Canadian Lynx AR(4) model
+n.ahead = 30
+phi = c(1.3, -0.7, 0.1, -0.2)
+f = fore.arma.wge(llynx, phi=phi, n.ahead=n.ahead, limits=FALSE, lastn = TRUE)
+ase = mean((llynx[(n-n.ahead+1):n] - f$f)^2)
+ase
+
+# Canadian Lynx AR(11) model
+n.ahead = 30
+phi = c(1.17, -0.54, 0.27, -0.31, 0.15, -0.15, 0.06, -0.03, 0.13, 0.20, -0.34)
+f = fore.arma.wge(llynx, phi=phi, n.ahead=n.ahead, limits=FALSE, lastn = TRUE)
+ase = mean((llynx[(n-n.ahead+1):n] - f$f)^2)
+ase
+
+```
+
+# Forecasting ARIMA(p,d,q)
+```{r}
+# ARIMA(1,1,0) forecasted with ARIMA(0,1,0) just to see the results
+x = gen.aruma.wge(n=50, phi=.8, d=1, sn=15)
+f = fore.aruma.wge(x, d=1, n.ahead=20, limits = FALSE)
+# Just reproduces the last value
+
+# ARIMA(1,1,0) forecasted with the correct ARIMA(1,1,0) equivalent
+x = gen.aruma.wge(n=50, phi=.8, d=1, sn=15)
+f = fore.aruma.wge(x, phi=.8, d=1, n.ahead=20, limits = FALSE)
+# Forecasts the same value superimposed with the exponential AR term
+# Note that this is not converging to the mean (since it is non stationary)
+# It is just to some converging to some point
+
+# ARIMA(1,1,0) forecasted with ARIMA(0,2,0) just to see the results
+x = gen.aruma.wge(n=50, phi= .8, d=1, sn=15)
+f = fore.aruma.wge(x, d=2, n.ahead=20, limits = FALSE)
+# Forecasts based on the last 2 data points
+```
+
+# Forecasting Seasonal Models
+
+## Simple Seasonal Models
+
+```{r}
+# Simply replicates the last period in the forecast
+x=gen.aruma.wge(n=20, s=4, sn = 6)
+f = fore.aruma.wge(x, s=4, n.ahead=24, lastn=FALSE, plot=TRUE, limits=FALSE)
+
+x=gen.aruma.wge(n=20, s=4, sn = 6)
+f = fore.aruma.wge(x, s=4, n.ahead=8, lastn=TRUE, plot=TRUE, limits=FALSE)
+
+x=gen.aruma.wge(n=20, phi=.8, s=4, sn = 6)
+f = fore.aruma.wge(x, phi=.8, s=4, n.ahead=24, limits=FALSE)
+```
+
+
+
+# Async Questions
+
+## Need to document section
+```{r}
+data = read.csv("../Datasets/swadelay.csv")
+data %>% glimpse()
+```
+
+```{r}
+plotts.wge(data$arr_delay)
+```
+
+```{r}
+phi = c(0.4411, 0.0185, -0.1193, 0.0815, -0.0003, 0.0152,
+        0.0562, -0.0940, 0.0558, 0.0660, 0.0172, 0.3685)
+
+factor.wge(phi = phi)
+
+f = fore.arma.wge(x = data$arr_delay, phi = phi, n.ahead = 25, limits = FALSE)
+```
+
+## 7.6
+
+```{r}
+phi = c(0.4, -0.6, 0.8)
+lag.max = 3
+psi_wts = psi.weights.wge(phi = phi, lag.max = lag.max)
+psi_wts[lag.max]
+```
+
+
+```{r}
+1 + sum(psi_wts[1:lag.max-1] * psi_wts[1:lag.max-1])
+```
+
+## 7.7
+
+```{r}
+data = read.csv("../Datasets/swadelay.csv")
+data %>% glimpse()
+```
+
+```{r}
+n = nrow(data)
+n.ahead = 30
+
+# ARMA(12)
+phi = c(0.44, 0.02, -0.12, 0.08, 0, 0.02, 0.06, -0.09, 0.06, 0.07, 0.02, 0.37)
+f = fore.arma.wge(data$arr_delay, phi=phi, n.ahead=n.ahead, limits=FALSE, lastn = TRUE)
+ase = mean((data$arr_delay[(n-n.ahead+1):n] - f$f)^2)
+ase
+
+# ARMA(12, 1)
+phi = c(0.34, 0.07, -0.11, 0.07, 0.01, 0.02, 0.06, -0.09, 0.05, 0.07, 0.02, 0.39)
+theta = -0.12
+f = fore.arma.wge(data$arr_delay, phi=phi, theta = theta, n.ahead=n.ahead, limits=FALSE, lastn = TRUE)
+ase = mean((data$arr_delay[(n-n.ahead+1):n] - f$f)^2)
+ase
+
+```
+
+
+## 7.9
+```{r}
+data(airlog)
+px = plotts.sample.wge(airlog)
+```
+
+
+```{r}
+# Woodward Gray Airline Model
+n = length(airlog)
+n.ahead = 36
+phi = c(-0.36, -0.05, -0.14, -0.11, 0.04, 0.09, -0.02, 0.02, 0.17, 0.03, -0.10, -0.38)
+f = fore.aruma.wge(airlog, phi=phi, d = 1, s = 12, n.ahead=n.ahead, limits=FALSE, lastn = TRUE)
+ase = mean((airlog[(n-n.ahead+1):n] - f$f)^2)
+ase
+```
+
+## 7.10
+
+```{r}
+data = read.csv("../MSDS-6373-Time-Series/Unit 7/AMZN.csv")
+data %>% glimpse()
+```
+
+
+```{r}
+f = fore.sigplusnoise.wge(data$Adj.Close, linear = TRUE, n.ahead = 30)
+```
+
+```{r}
+f$f[30]
+f$ll[30]
+f$ul[30]
+```
+
+
+

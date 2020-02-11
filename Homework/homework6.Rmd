@@ -1,0 +1,261 @@
+---
+title: "Homework 6"
+author: "Nikhil Gupta"
+date: "`r Sys.time()`"
+output:
+  html_document:
+    toc: yes
+    toc_depth: 6
+    toc_float: yes
+  word_document:
+    toc: yes
+    toc_depth: '6'
+always_allow_html: yes
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Setup
+
+```{r}
+library(tswge)
+library(tidyverse)
+source("../Code/common_functions.R")
+```
+
+
+# Problem 5.1
+
+```{r}
+data("hadley")
+
+hadley %>% 
+  glimpse()
+```
+
+
+## a
+```{r}
+px = plotts.wge(hadley)
+```
+
+## b 
+```{r}
+data = data.frame(temp = hadley)
+data = data %>%
+  mutate(time = as.numeric(rownames(.)))
+str(data)
+```
+
+```{r}
+model_lm = glm(formula = temp ~ time, data = data)
+model_lm
+```
+
+a_hat = `r model_lm$coefficients[1]`
+b_hat = `r model_lm$coefficients[2]`
+
+## c
+```{r}
+px = plotts.wge(model_lm$residuals)
+```
+
+## d
+```{r}
+check_stationarity(model_lm$residuals)
+```
+
+### Condition 1: 
+
+Mean does not depend on time: It is hard to pin point from a single realization. It looks like the mean might be varying with time, but it could just be wandering behavior similar to what is seen in a stationary AR process with real positive root.
+
+### Condition 2:
+
+Variance does not depend on time: Again it is hard to say from just a single realization whether the variance is indepent of time. But given just this dataset, there is no reason to doubt it.
+
+### Condition 3
+
+The ACF for the 1st half looks similar to that of the second half upto a lag of about 12. There is a slight mismatch after that, but not too appreciable to warrant suspicion of non-stationarity.
+
+## e
+```{r}
+px = plotts.sample.wge(data$temp)
+px = plotts.sample.wge(model_lm$residuals)
+```
+
+### Original Data
+The original data ACF plots show extended autocorrelations pointing to an ARIMA type of model with root at 1. This manifests as wandering behavior in the realizations which can also be seen in the plot.
+
+### Residuals
+The residual shows an exponentially decaying ACF, quite similar to what we would expect from a stationary AR process with a real and positive root. This is also reinforced by he Spectral Density plot which shows a peak at 0 (indicative of wandering behavior)
+
+# Problem 5.2
+
+## a
+```{r}
+# (1 - 0.66B + 0.02B^2 -0.1B^3 -0.24B^4) * Xt = at
+
+phi = c(0.66, -0.02, 0.1, 0.24)
+factor.wge(phi = phi)
+
+x1 = gen.arma.wge(n = 150, phi = phi)
+x2 = gen.arma.wge(n = 150, phi = phi)
+x3 = gen.arma.wge(n = 150, phi = phi)
+x4 = gen.arma.wge(n = 150, phi = phi)
+```
+
+Yes, These do tend to show a linear trend, even though the original model was stationary.
+
+## b
+```{r}
+phi = c(0.614, -0.044, 0.077, 0.206)
+x1 = gen.sigplusnoise.wge(n = 150, b0 = -0.526, b1 = 0.0044, phi = phi, vara = 0.01)
+x2 = gen.sigplusnoise.wge(n = 150, b0 = -0.526, b1 = 0.0044, phi = phi, vara = 0.01)
+x3 = gen.sigplusnoise.wge(n = 150, b0 = -0.526, b1 = 0.0044, phi = phi, vara = 0.01)
+x4 = gen.sigplusnoise.wge(n = 150, b0 = -0.526, b1 = 0.0044, phi = phi, vara = 0.01)
+```
+
+Yes, some of these realization do have an upward trend and tend to look similar to the global temp data.
+
+# 5.3
+
+## a
+```{r}
+phi = c(1.2, -0.8)
+factor.wge(phi = phi)
+x = gen.arima.wge(n = 200, phi = phi, d = 1)
+```
+
+This is a non-stationary model and does not have a seasonal component. 
+
+The wandering behavior due to the ARIMA factor can be seen in this dataset. The cyclical behavior due to the AR(2) complex root is also superimposed on top of the wandering behavior due to the ARIMA term. 
+
+## b
+```{r}
+phi = c(1.2, -0.8)
+x = gen.arima.wge(n = 200, phi = phi, d = 2)
+```
+
+The wandering behavior due to the ARIMA factor (d = 2) is clearly visible in this data and this completely drowns out the cyclical behavior due to the AR(2) complex root.
+
+This is a non-stationary model and does not have a seasonal component.
+
+## c
+```{r}
+# There might be a typo in the book. It should be (1-B^4) not (1-B)^4
+phi = c(1.2, -0.8)
+x = gen.arima.wge(n = 200, phi = phi, d = 0, s = 4)
+```
+
+This has even more wandering compared to 'b'. This is a non-stationary model and does not have a seasonal component.
+
+## d
+```{r}
+# There might be a typo in the book. It should be (1-B^4) not (1-B)^4
+phi = c(1.2, -0.8)
+lambda = c(-1, -1)
+
+factor.wge(phi = lambda)
+
+x = gen.aruma.wge(n = 200, phi = phi, d = 2, s = 4, lambda = lambda)
+```
+
+The ARIMA factor with d = 2 is drowning out all the seasonality in the data.
+
+# 5.5
+
+## a
+```{r}
+phi = c(3, -4.5, 5, -4, 2, -0.5)
+theta = c(1.7, -0.8)
+
+factor.wge(phi = phi)
+factor.wge(phi = theta)
+```
+
+* p = 2
+* d = 4
+* q = 2
+* ARUMA(2,4,2) # Note this is ARUMA not ARIMA and there is no seasonal component
+
+## b
+
+```{r}
+phi = c(0.5, -0.3, 0.95, -0.3, 0.35, -0.2)
+
+factor.wge(phi = phi)
+```
+
+* p = 5
+* d = 1
+* q = 0 
+* ARUMA(5,1,0)
+
+
+## c
+
+```{r}
+phi = c(1.5, -1.3, -0.35, 1, -1.35, 0.7, -0.4)
+theta = c(0, -0.9)
+
+factor.wge(phi = phi)
+factor.wge(phi = theta)
+```
+
+* p = 4
+* d = 3
+* q = 2
+* ARUMA(4,3,2)
+
+## d
+
+```{r}
+phi = c(0.5, 0.5, 0, 1, -0.5, -0.5)
+theta = c(0, 0.81)
+
+factor.wge(phi = phi)
+factor.wge(phi = theta)
+```
+
+* p = 1
+* d = 5
+* q = 2
+* ARUMA(1,5,2)
+
+# 5.7
+
+## a
+```{r}
+phi = c(rep(0,5),1)
+factor.wge(phi = phi)
+```
+
+## b
+```{r}
+x = gen.aruma.wge(n = 120, s = 6)
+```
+
+We can clearly see the seasonal behavior in this data. The pattern repeats every 6 cycles.
+
+## c
+```{r}
+# Since we can not plot a non-stationary model here, we will replace this with a stationary (almost non-stationary) counterpart
+pt = plotts.true.wge(n = 120, phi = c(rep(0, 5), 0.999))
+
+```
+
+The ACF shows that there is a seasonal behavior with s = 6 since the ACF at lag = 6 is almost perfectly correlated with the ACF at lag = 0.
+
+We also see peaks in the Spectral Density at f = 0, 0.16, 0.33 and 0.5
+
+## d
+```{r}
+px = plotts.sample.wge(x)
+```
+
+These results are very much similar to what we saw in c. The ACF shows the seasonal behavior wth s = 6 and the spectral density shows peaks at roughly the same points (with the peak at f = 0 being slghtly depressed compared to the true spectral density).
+
+
+

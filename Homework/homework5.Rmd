@@ -1,0 +1,281 @@
+---
+title: "Homework 5"
+author: "Nikhil Gupta"
+date: "`r Sys.time()`"
+output:
+  word_document:
+    toc: yes
+    toc_depth: '6'
+  html_document:
+    toc: yes
+    toc_depth: 6
+    toc_float: yes
+always_allow_html: yes
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Setup
+
+```{r}
+library(tswge)
+source("../Code/common_functions.R")
+```
+
+
+# Problem 3.1
+
+## a
+```{r}
+theta = c(0.95, -0.9,  0.855)
+x = gen.arma.wge(n=200, theta = theta, sn = 101)
+x = 25 + x
+px = plotts.sample.wge(x)
+```
+
+## b & c
+```{r}
+pt = plotts.true.wge(theta = theta)
+```
+
+## d
+```{r}
+muX = 25  # from the equation, we can see that it is of the 0 mean form
+varX = pt$acv[1]
+
+print(paste0("Mean of X: ", muX))
+print(paste0("Var of X : ", varX))
+#print(paste0("Var of X (alternatively): ", calculate_arp_varx(phi = phi, p = pt, vara = 1)))
+ 
+```
+
+## e
+```{r}
+# Since the model is stationary, we can use all the data to compute mean and variance
+muX_est  = mean(x)
+varX_est = var(x)
+
+print(paste0("Est. Mean of X: ", muX_est))
+print(paste0("Est. Var of X : ", varX_est))
+
+```
+
+
+# 3.3
+
+## c
+```{r}
+# Moving Average Models are always stationary
+
+# This is a moving average model which is always stationary since it is a linear combination of white noise terms which are individually stationary.  All moving average models are stationary, they may not be invertible, but they are stationary.  
+```
+
+
+# 3.6
+
+## a
+
+```{r}
+p = 4  # Incorrect
+q = 3  # Incorrect
+
+phi = c(1, -0.26, -0.64, 0.576)
+factor.wge(phi = phi)
+
+theta = c(2.4, -2.18, 0.72)
+factor.wge(phi = theta)
+
+# The factors (1-0.8B) cancel each other, hence it is an AR(3,2) model not an AR(4,3) model.
+
+# All the Abs Reciprocals of AR components are < 1 so the model is stationary
+# All the Abs Reciprocals of MA components are < 1 so the model is invertible
+
+```
+
+# 3.7
+
+## a
+
+```{r}
+phi = c(0.1, -0.5, -0.08, 0.24)
+factor.wge(phi = phi)
+
+# theta = c(2.4, -2.18, 0.72)
+# factor.wge(phi = theta)
+
+# Stationary since all roots of the AR component are < 1
+# AR models can be thought to have MA component with theta1 approaching 0
+# hence the MA root will be approaching infinity. Hence invertible.
+
+pt = plotts.true.wge(phi = phi)
+
+# Freq at 0.2371 is dominant since abs reciprocal is ~ 0.9. 
+# Other roots are not as dominant since abs reciprocal is < 0.6
+# Hence we see a peak at 0.2371 only and the generated signal
+# is also showing a pseudi sinuisoidal frequency of ~ 0.25
+
+# This pseudo cyclical behavior is also seen in the ACF 
+# (we can see the ACF repeat after lag of 4, hence period = 0.25)
+
+```
+
+## b
+```{r}
+phi = c(1.3, -0.4)
+factor.wge(phi = phi)
+
+theta = c(1.9)
+factor.wge(phi = theta)
+
+# Stationary since all roots of the AR component are < 1
+# MA component has abs reciprocal > 1, hence non invertible
+
+# pt = plotts.true.wge(phi = phi, theta = theta)
+```
+
+## c
+
+```{r}
+phi = c(1.9)
+factor.wge(phi = phi)
+
+theta = c(1.3, -0.4)
+factor.wge(phi = theta)
+
+# Non Stationary model since one of the roots of the AR component are > 1
+# MA component has abs reciprocal < 1, hence it is invertible
+
+# pt = plotts.true.wge(phi = phi, theta = theta)
+
+```
+
+
+
+
+## e
+
+```{r}
+phi = c(1, 0.49, -0.9, 0.369)
+factor.wge(phi = phi)
+
+theta = c(-1, -1, -0.75)
+factor.wge(phi = theta)
+
+# Stationary since all roots of the AR component are < 1
+# MA component has abs reciprocal < 1, hence it is invertible
+
+pt = plotts.true.wge(phi = phi, theta = theta)  # Can not see slower frequency here
+# pt = plotts.true.wge(n = 200, phi = phi, theta = theta,lag.max = 100) # Can see slower frequency here
+
+# AR Components
+# There are roots at f = 0 and f = 0.5 and both seem to be dominant
+# (abs reciprocal ~ 0.95)
+# There is also a complex root at system frequencies of 0.1074
+# but thsi is not as dominant since abs reciprocal ~ 0.64 only
+#
+# MA Components
+# There should be a dips at a system frequency of 0.5 (real root) and 0.2623 (complex root). 
+# Both are dominant although the complex root is more dominant. 
+# The dip at 0.5 may cancel out the peak at 0.5 from the AR component 
+# although not completely since it is not as dominant as the AR component.
+
+# The realization should show a strong wandering behavior with pseudo cyclical 
+# frequency of 0.1
+
+# The ACF should be dominanted by the AR component with freq = 0 which looks 
+# like decaying exponentials. Alternating exponentials may not be seen since 
+# the MA component at f = 0.5 cancels out the AR component at that frequency 
+# to some extent.
+
+# We can see the wandering behavior from the realization.
+# We also see a pseudo cyclical behavior. 
+# ~ 8 cycles in 80 time points (from 20 to 100) => Freq = 0.1
+
+```
+
+# 3.8
+## a
+
+```{r}
+theta = c(0.5, 5)
+factor.wge(phi = theta)
+acf1 = true.arma.aut.wge(theta = theta)
+# Non Invertible since abs reciprocal > 1
+
+# The invertible model will have the reciprocal of the current roots
+# You can get this from the abs reciprocal from the original model
+# Only need to take this for the non invertible part
+# The invertible part can be taken as is.
+# Root 1 = 2.5 
+# Root 2 = -2
+# (1 - 0.4B)(1 + 0.5B) = 0
+theta = c(-0.1, 0.2)
+factor.wge(phi = theta)
+acf2 = true.arma.aut.wge(theta = theta)
+
+print(paste0("Are the ACFs for the 2 models equal: ", all(round(acf1$acf,4) == round(acf2$acf,4))))
+print(acf1$acf)
+print(acf2$acf)
+
+```
+
+## b
+
+```{r}
+theta = c(-2, 1.5)
+factor.wge(phi = theta)
+acf1 = true.arma.aut.wge(theta = theta)
+# Non Invertible since abs reciprocal > 1 for one of the roots
+
+# The invertible model will have the reciprocal of the current roots
+# Root 1 = 1.7208  # Use as is sicne this part is invertible
+# Root 2 = -2.5813 # Reciprocal of the original root
+# (1 - 1.7208B)(1 + 0.3874B) = 0
+# 1 - 1.33B - 0.667B2 = 0
+theta = c(1.333, 0.667)
+factor.wge(phi = theta)
+acf2 = true.arma.aut.wge(theta = theta)
+
+print(paste0("Are the ACFs for the 2 models equal: ", all(round(acf1$acf,3) == round(acf2$acf,3))))
+print(acf1$acf)
+print(acf2$acf)
+
+```
+
+
+
+# 3.11
+```{r}
+phi = c(1, 0.49, -0.9, 0.369)
+factor.wge(phi = phi)
+
+theta = c(-1, -1, -0.75)
+factor.wge(phi = theta)
+
+# Stationary since all roots of the AR component are < 1
+# MA component has abs reciprocal < 1, hence invertible
+
+psi.weights.wge(phi=phi, theta=theta, lag.max = 10)
+
+```
+
+
+# 3.13
+
+## i
+
+```{r}
+phi = c(2.2, -2.1, 0.8)
+factor.wge(phi = phi)
+
+# Realization
+x = gen.arma.wge(n = 100, phi = phi, sn = 101)
+px = plotts.sample.wge(x)
+
+# AR Order p = 3
+# Number of factors = 2 (from factor table)
+pf = factor.comp.wge(x, p = 3, ncomp = 2)
+
+```

@@ -39,7 +39,10 @@ key = readLines(file.choose())
 ```
 
 ```{r}
-pull = fromJSON(paste0("https://api.bls.gov/publicAPI/v2/timeseries/data/CES0000000001?registrationkey=", key, "&catalog=true&startyear=2001&endyear=2020")) 
+series = "CES0000000001"  # Seasonally adjusted non farm jobs data
+pull = fromJSON(paste0("https://api.bls.gov/publicAPI/v2/timeseries/data/", series,
+                       "?registrationkey=", key,
+                       "&catalog=true&startyear=2001&endyear=2020")) 
 
 data = pull %>%
   pluck("Results", "series", "data", 1) %>% 

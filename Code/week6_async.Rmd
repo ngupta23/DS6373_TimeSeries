@@ -164,7 +164,7 @@ dif = artrans.wge(x = x, phi.tr = c(0,0,0,1)) #Take out the (1-B^4)
 aic5.wge(dif) #Check the structure of the noise
 ```
 
-### Monthly
+### Annual (not monthly)
 ```{r}
 phi = c(.4,.6,-.74)
 theta = c(-.7)
