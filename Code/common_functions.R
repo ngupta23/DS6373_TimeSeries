@@ -60,3 +60,12 @@ calculate_arp_varx = function(phi, pt, vara = 1){
   
   return (vara / (1 - sum))
 }
+
+### Add to tswgewrapped
+factor.wge.season = function(s){
+  phi = c(rep(0,s-1), 1)
+  cat("--------------------------------------------------\n")
+  cat(paste0("Printing Factors for Seasonality 's' = ", s, "\n"))
+  cat("--------------------------------------------------\n")
+  factor.wge(phi = phi)
+}
