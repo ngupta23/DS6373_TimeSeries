@@ -1,0 +1,72 @@
+---
+title: "Untitled"
+author: "Nikhil Gupta"
+date: "February 12, 2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# DATA
+* https://archive.ics.uci.edu/ml/datasets/SECOM
+
+SETUP
+```{r}
+library(tidyverse)
+library(xts)
+library(tswge)
+```
+
+```{r}
+features = read.csv("../Datasets/secom/secom.data", sep = " ", header = FALSE, stringsAsFactors = FALSE)
+labels = read.csv("../Datasets/secom/secom_labels.data", sep = " ", header = FALSE, col.names = c("output", "time"),  stringsAsFactors = FALSE)
+```
+
+# EDA
+```{r}
+# features %>% skimr::skim()
+# # Lots of missing values
+```
+
+
+```{r}
+complete = complete.cases(features)
+str(complete)
+sum(complete)
+```
+
+
+```{r}
+str(labels)
+labels %>% skimr::skim()
+```
+
+# CLEAN DATA
+```{r}
+data = cbind(features, labels)
+#colnames(data)
+```
+
+
+```{r}
+data = data %>% 
+  mutate(time = as.POSIXct(time, format = "%d/%m/%Y %H:%M:%OS")) %>% ## format date correctly
+  xts(order.by = .$time) # convet to XTS object
+
+data = data[,colnames(data) != 'time']  # remove time column since it is already an index
+
+head(colnames(data))
+tail(colnames(data))
+```
+
+# PLOTTING
+
+**Having Issues here with plotting the X-axis**
+Need to research more
+
+```{r}
+
+```
+

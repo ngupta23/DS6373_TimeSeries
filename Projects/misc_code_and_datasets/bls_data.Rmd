@@ -1,0 +1,102 @@
+---
+title: "BLS Data"
+author: "Nikhil Gupta"
+date: "`r Sys.time()`"
+output:
+  html_document:
+    toc: yes
+    toc_depth: 3
+    toc_float: yes
+  pdf_document:
+    toc: yes
+    toc_depth: '6'
+  word_document:
+    toc: yes
+    toc_depth: '6'
+always_allow_html: yes
+---
+
+* Data from BLS website using code from Jonathan Regenstein
+* https://www.linkedin.com/posts/jkregenstein_rstudio-data-quantitativefinance-activity-6631663823331880960-gM4v/
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Setup
+
+```{r message=FALSE, warning=FALSE}
+library(tswge)
+library(tidyverse)
+library(tidyquant)
+library(jsonlite)
+library(httr)
+```
+
+# Fetch Data
+```{r}
+key = readLines(file.choose())
+```
+
+```{r}
+series = "CES0000000001"  # Seasonally adjusted non farm jobs data
+pull = fromJSON(paste0("https://api.bls.gov/publicAPI/v2/timeseries/data/", series,
+                       "?registrationkey=", key,
+                       "&catalog=true&startyear=2001&endyear=2020")) 
+
+data = pull %>%
+  pluck("Results", "series", "data", 1) %>% 
+  simplify() %>% 
+  select("year", "period", "value") %>% 
+  unite("date", c("year", "period"), sep = "-", remove = TRUE) %>% 
+  mutate(date = ymd(parse_date_time(date, "%Y%m")),
+         jobs = as.numeric(value)) %>% 
+  select(-value) %>% 
+  arrange(date)
+
+str(data)
+head(data)
+tail(data)
+```
+
+# EDA
+
+```{r}
+px = plotts.sample.wge(data$jobs)
+```
+
+
+## Initial Observations
+* Note that the realization Y-axis is chopped off. The values are from 130,000 to 150,000.
+* ACF plots show extended ACFs pointing to a ARIMA type model.
+* Spectral density also shows peak at f = 0 indicating wandering behavior (also seen in the realization).
+* This can be removed by applying a High Pass Filter (differencing the data)
+
+## First Difference
+```{r}
+dif1 = artrans.wge(data$jobs, phi.tr = 1)
+px = plotts.sample.wge(dif1)
+```
+
+### Observations
+* We still see extended ACFs pointing to at least another ARIMA term 
+* We will take second difference to to remove the wandering behavior due to ARIMA
+
+## Second Difference
+```{r}
+dif2 = artrans.wge(dif1, phi.tr = 1)
+px = plotts.sample.wge(dif2)
+```
+
+### Observations
+* Looks like the residual is an MA model with q = 1 (since ACF from lag = 2 onwards is almost 0)
+* Let's confirm this by finding the best fit for this residual based on AIC.
+
+## Checking Residuals
+```{r}
+aic5.wge(dif2)
+```
+
+### Observations
+* Spot on. Looks like the MA(1) model fits the residual well.
+* Full Data seems to fit ARIMA(0,2,1) well.

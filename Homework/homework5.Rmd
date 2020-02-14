@@ -279,3 +279,21 @@ px = plotts.sample.wge(x)
 pf = factor.comp.wge(x, p = 3, ncomp = 2)
 
 ```
+
+
+
+
+### factor.comp.wge eval
+```{r}
+phi = c(2.2, -2.1, 0.8)
+
+# True Factors
+factor.wge(phi = phi)
+
+# Realization
+x = gen.arma.wge(n = 200, phi = phi, sn = 101)
+
+# Factors in the realization (should match the true ones in theory)
+# User should specify p, ncomp is only to limit number of components that are plotted
+pf = factor.comp.wge(x, p = 3, ncomp = 2)
+```

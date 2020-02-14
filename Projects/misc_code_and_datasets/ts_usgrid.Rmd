@@ -1,0 +1,77 @@
+---
+title: "US Grid"
+author: "Nikhil Gupta"
+date: "`r Sys.time()`"
+always_allow_html: yes
+output:
+ html_document:
+   toc: true
+   toc_float: true
+   toc_depth: 6
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+```{r}
+rm(list = ls()) # Remove existing variables
+```
+
+# Setup
+
+```{r}
+library(USgrid)
+library(plotly)
+library(tswge)
+library(tidyverse)
+```
+
+```{r}
+plot_ly(data = US_elec,
+        x = ~ date_time,
+        y = ~ series,
+        color = ~ type,
+        type = "scatter",
+        mode = "lines")
+```
+
+```{r}
+plot_ly(data = US_source,
+        x = ~ date_time,
+        y = ~ series,
+        color = ~ source,
+        type = "scatter",
+        mode = "lines")
+```
+
+```{r}
+head(US_elec)
+```
+
+
+```{r}
+demand = US_elec %>% dplyr::filter(type == 'demand') 
+head(demand)
+tail(demand)
+length(demand$series)
+
+# x = ts(demand$series, start = lubridate::date(demand$date_time[1]), lubridate::date(demand$date_time[nrow(demand)]))
+x = as.ts(demand$series)
+length(x)
+plotts.wge(x)
+```
+
+```{r}
+px = plotts.sample.wge(x)
+```
+
+```{r}
+pz = parzen.wge(x, trunc = 10000)
+```
+
+```{r}
+
+```
+

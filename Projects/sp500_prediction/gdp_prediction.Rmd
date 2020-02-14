@@ -1,0 +1,89 @@
+---
+title: "S&P 500 Prediction"
+author: "Nikhil Gupta"
+date: "`r Sys.time()`"
+output:
+  html_document:
+    toc: yes
+    toc_depth: 6
+    toc_float: yes
+  word_document:
+    toc: yes
+    toc_depth: '6'
+always_allow_html: yes
+---
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+# Setup
+```{r}
+library(tswge)
+library(tidyverse)
+library(tidyquant)
+library(skimr)
+library(plyr)
+library(ggplot2)
+library(nnfor)  # Forecasting using Neural Networks
+source("../misc_code_and_datasets/common_functions_tq.R")
+```
+
+
+# S&P 500
+```{r}
+tq_index_options()
+```
+
+
+```{r}
+sp500 = tq_index("SP500", use_fallback = TRUE)
+sp500 %>% glimpse()
+```
+
+* Does not return stock price value (only list of stocks with some details)
+* Will need to combine this with other datasets to compute index value
+
+```{r}
+sp500 %>% skim()
+```
+
+
+# VOO as a substitute
+```{r}
+voo = tq_get("VOO")
+voo %>% glimpse()
+```
+
+```{r}
+voo %>%
+    ggplot(aes(x = date, y = adjusted)) +
+    geom_line() +
+    #labs(title = title, y = y_label, x = x_label) + 
+    theme_tq()
+```
+
+
+```{r}
+px = plotts.sample.wge(voo$adjusted)
+```
+
+
+```{r}
+dif1 = artrans.wge(voo$adjusted, phi.tr = 1)
+px = plotts.sample.wge(dif1)
+```
+
+
+```{r}
+f = fore.aruma.wge(voo$adjusted, d = 1, n.ahead = 180)
+```
+
+* Forecast is just a straight line. Not a very interesting problem to solve.
+* Maybe something like forecasting the GDP would be better. 
+
+```{r}
+
+```

@@ -1,0 +1,247 @@
+---
+title: "tidyquant"
+author: "Nikhil Gupta"
+date: "`r Sys.time()`"
+output:
+  html_document:
+    toc: yes
+    toc_depth: 6
+    toc_float: yes
+  word_document:
+    toc: yes
+    toc_depth: '6'
+always_allow_html: yes
+---
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+**Based on the information [here](https://cran.r-project.org/web/packages/tidyquant/vignettes/TQ01-core-functions-in-tidyquant.html#retrieve-consolidated-symbol-data)
+
+# Setup
+
+```{r}
+library(tswge)
+library(dplyr)
+library(tidyquant)
+source("common_functions_tq.R")
+```
+
+
+# Individual Stock - Week 6 Prelive #4
+```{r}
+txn = tidyquant::tq_get("TXN", get = "stock.prices", from = "2019-01-01")
+txn %>% 
+  glimpse()
+```
+
+
+```{r}
+txn_financials <- tq_get("TXN", get = "financials")
+```
+
+# QUANDL (needs API)
+
+```{r}
+quandl_api_available = FALSE  # Limited to 50 pulls without API
+```
+
+```{r}
+if(quandl_api_available){
+  key = readLines(file.choose())
+  quandl_api_key(key)
+}
+```
+
+## NSE OIL
+```{r}
+quandl_search(query = "Oil", database_code = "NSE", per_page = 3)
+
+```
+
+## QUANDL WIKI
+```{r}
+c("WIKI/FB", "WIKI/AAPL") %>%
+    tq_get(get  = "quandl",
+           from = "2016-01-01",
+           to   = "2016-12-31")
+
+```
+
+```{r}
+c("WIKI/FB", "WIKI/AAPL") %>%
+    tq_get(get          = "quandl",
+           from         = "2007-01-01",
+           to           = "2016-12-31",
+           column_index = 11, 
+           collapse     = "annual",      
+           transform    = "rdiff")   
+```
+
+
+# FRED
+
+* use get = "economic.data" to get data from FRED
+
+## Employment Related
+
+### Unemployment Data
+
+```{r}
+ID = "UNRATE"
+from = "1970-01-01"
+
+data = tqw_get_fred(ID = ID, from = from)
+data %>% glimpse()
+```
+
+
+```{r}
+## Setup
+
+# Column Names
+mutate = TRUE
+new_name = "unemployment_rate"
+old_name = "price"
+
+# Plotting
+title = "Unemployment Rate vs. Time"
+y_label = "Unemployment Rate"
+
+tqw_plot_ts(data = data, y_col = new_name, mutate = TRUE, old_name = old_name, title = title, y_label = y_label)
+```
+
+### Non Farm Jobs (Seasonally Adjusted)
+
+```{r}
+ID = "PAYEMS"
+from = "1970-01-01"
+
+data = tqw_get_fred(ID = ID, from = from)
+data %>% glimpse()
+```
+
+
+```{r}
+## Setup
+
+# Column Names
+mutate = TRUE
+new_name = "jobs"
+old_name = "price"
+
+# Plotting
+title = "Total Nonfarm Jobs (Seasonally Adjusted) vs. Time"
+y_label = "Total Nonfarm Jobs (Seasonally Adjusted)"
+
+tqw_plot_ts(data = data, y_col = new_name, mutate = TRUE, old_name = old_name, title = title, y_label = y_label)
+```
+
+## Treasury Related
+
+### 10 yr Treasury Rate
+```{r}
+ID = "DGS10"
+from = "1970-01-01"
+
+data = tqw_get_fred(ID = ID, from = from)
+data %>% glimpse()
+```
+
+```{r}
+## Setup
+
+# Column Names
+mutate = TRUE
+new_name = "rate_10_yr"
+old_name = "price"
+
+# Plotting
+title = "10 year Treasury Rate vs. Time"
+y_label = "10 year Treasury Rate"
+
+tqw_plot_ts(data = data, y_col = new_name, mutate = TRUE, old_name = old_name, title = title, y_label = y_label)
+```
+
+### 10yr - 3mo Treasury Rate
+```{r}
+ID = "T10Y3M"
+from = "1970-01-01"
+
+data = tqw_get_fred(ID = ID, from = from)
+data %>% glimpse()
+```
+
+```{r}
+## Setup
+
+# Column Names
+mutate = TRUE
+new_name = "rate_10_yr_minus_3mp"
+old_name = "price"
+
+# Plotting
+title = "10 year - 3 month Treasury Rate vs. Time"
+y_label = "10 year - 3 month Treasury Rate"
+
+tqw_plot_ts(data = data, y_col = new_name, mutate = TRUE, old_name = old_name, title = title, y_label = y_label)
+```
+
+### Federal Funds Interest Rate
+```{r}
+ID = "FEDFUNDS"
+from = "1970-01-01"
+
+data = tqw_get_fred(ID = ID, from = from)
+data %>% glimpse()
+
+```
+
+
+```{r}
+## Setup
+
+# Column Names
+mutate = TRUE
+new_name = "fed_interest_rate"
+old_name = "price"
+
+# Plotting
+title = "Federal reserve Interest Rate vs. Time"
+y_label = "Federal reserve Interest Rate"
+
+tqw_plot_ts(data = data, y_col = new_name, mutate = TRUE, old_name = old_name, title = title, y_label = y_label)
+
+```
+
+### 3 month LIBOR
+```{r}
+ID = "USD3MTD156N"
+from = "1970-01-01"
+
+data = tqw_get_fred(ID = ID, from = from)
+data %>% glimpse()
+```
+
+```{r}
+## Setup
+
+# Column Names
+mutate = TRUE
+new_name = "LIBOR_3mo_rate"
+old_name = "price"
+
+# Plotting
+title = "3 Month LIBOR Rate vs. Time"
+y_label = "3 Month LIBOR Rate Treasury Rate"
+
+tqw_plot_ts(data = data, y_col = new_name, mutate = TRUE, old_name = old_name, title = title, y_label = y_label)
+```
+
+
+```{r}
+
+```
+

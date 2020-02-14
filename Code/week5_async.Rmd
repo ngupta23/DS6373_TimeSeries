@@ -52,7 +52,7 @@ pt = plotts.true.wge(theta = theta)
 # AR(2): X_t - 1.1*X_t-1 + 0.9*X_t-2= a_t
 phi = c(1.1, -0.9)
 pt = plotts.true.wge(phi = phi)
-factor.wge()
+factor.wge(phi)
 
 # MA(2): X_t = a_t - 1.1*a_t-1 +.9*a_t-2
 pt = plotts.true.wge(theta=c(1.1,-.9))
@@ -198,5 +198,8 @@ phi = c(1.95, -1.9)
 psi.weights.wge(phi = phi, lag.max = 5)
 ```
 
+```{r}
+
+```
 
 

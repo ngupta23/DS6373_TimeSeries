@@ -83,7 +83,7 @@ factor.wge(phi = theta)
 ## 4
 ```{r}
 txn = tidyquant::tq_get("TXN", get = "stock.prices", from = "2019-01-01")
-txn %>% 
+txn %>%
   glimpse()
 ```
 
@@ -101,6 +101,28 @@ aic5.wge(dif1)
 * 'dif1' looks to be just white noise. Hence the model best suited for this could be a simple ARIMA(0,1,0)
 * The Spectral Density does indicate a few small peaks and dips, indicating that there may be some AR and MA components as well. After checking the AIC values, a fit with p = 2 and q = 0 does give the best AIC and hence we could also use ARIMA(2,1,0) and compare the results of the 2 models.
 
-```{r}
 
+# Live Session
+```{r}
+# If we are trying to fit a 1-B^12 model, we fit to order 15 and then ask for phis and see if we have factors close to those that are seen in pure 1-B^12 model. 
+factor.wge(c(0.6996, 0.2599, 0.0079, -0.0646, 0.1381, -0.0953, 0.0235, -0.0969, 0.1770, -0.1191, 0.1030, 0.7754, -0.4590, -0.4099, 0.0501))
+
+factor.wge(c(rep(0,11),1))
+
+# At least 6 of the 7 of the factors are well represented in our AR(15) model
+# 1-B is not well represented but that is still OK. It can still be considered pretty close to 1-B^12
 ```
+
+
+```{r}
+x = gen.arma.wge(n = 200, phi = c(0.3, 0.5))
+aic.wge(x)  # Returns the phi and theta values as well 
+# aic5.wge also fits the models, but does not return the phi and theta values.
+```
+
+
+```{r}
+factor.wge(c(0.4, 0, 0.74))
+```
+
+
