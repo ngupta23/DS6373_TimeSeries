@@ -530,6 +530,10 @@ tail(data)
 * So we may need to change the gdp column to a lagged gdp column (for next quarter). We will evaluate how to do this.
 
 ```{r}
+write.csv(data, "economic_indicators.csv", row.names = FALSE)
+```
+
+```{r}
 
 
 ```
