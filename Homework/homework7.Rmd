@@ -1,0 +1,408 @@
+---
+title: "Homework 7"
+author: "Nikhil Gupta"
+date: "`r Sys.time()`"
+output:
+  word_document:
+    toc: yes
+    toc_depth: '6'
+  html_document:
+    toc: yes
+    toc_depth: 6
+    toc_float: yes
+always_allow_html: yes
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Setup
+
+```{r}
+library(tswge)
+library(tidyverse)
+source("../Code/common_functions.R")
+```
+
+
+# Problem 6.1
+
+```{r}
+x = c(40, 30.5, 49.8, 38.3, 29.3, 48.7, 39.2, 31.7, 46.1, 42.4)
+phi = c(-1.1, -1.78, -0.88, -0.64)
+theta = c(0.2, -0.9)
+```
+
+## a
+```{r}
+
+compute_a = function(x, phi, theta, index){
+  
+  ## Limit 1
+  get_a_i_lesseq_p = function(index){
+    all_a = rep(0,index)  # Return all 0s till the index
+    return(all_a)
+  }
+  
+  ## Limit 2
+  get_a_i_lesseq_lenX = function(x, p, q, phi, theta, index){
+    all_a = get_a_i_lesseq_p(p)  ## get all 0's till p
+    
+    ## Then compute the values one by one till needed
+    limit = min(index, length(x))
+    for (i in (p+1):limit){
+        a = x[i] - sum(phi * x[(i-1):(i-p)]) + sum(theta * all_a[(i-1):(i-q)]) - (1 - sum(phi)) * mean(x)
+        all_a = c(all_a, a)
+    }
+    
+    return(all_a)
+  }
+  
+  ## Limit 3
+  get_a_i_more_lenX = function(x, p, q, phi, theta, index){
+    n = length(x)
+    all_a = get_a_i_lesseq_lenX(x, p, q, phi, theta, n)  ## Get all values till len(x)
+    all_a = c(all_a, rep(0, (index-n)))  ## Then append 0s after that
+    return(all_a)
+  }
+  
+  
+  p = length(phi)
+  q = length(theta)
+
+  all_a = c()
+  
+  if (index <= p){
+    all_a = get_a_i_lesseq_p(index)
+  }
+  else if (index <= length(x)){
+    all_a = get_a_i_lesseq_lenX(x, p, q, phi, theta, index)
+  }
+  else{
+    all_a = get_a_i_more_lenX(x, p, q, phi, theta, index)
+  }
+  
+  return(all_a)
+}
+
+compute_vara = function(all_a){
+  subset = all_a[all_a != 0]
+  len_subset = length(subset)
+  vara = sum(subset^2)/length(subset)
+  return(vara)
+}
+
+compute_stda = function(all_a){
+  return(sqrt(compute_vara(all_a)))
+}
+
+return_all_a_calc = function(x, phi, theta, index){
+  all_a = compute_a(x = x, phi = phi, theta = theta, index = index)
+  vara = compute_vara(all_a)
+  stda = compute_stda(all_a)
+  return(list(all_a = all_a, vara = vara, stda = stda))
+}
+
+rv = return_all_a_calc(x, phi, theta, 11)
+rv
+
+```
+
+
+## b 
+```{r}
+f = fore.arma.wge(x, phi = phi, theta = theta, n.ahead = 4)
+f
+```
+
+# Problem 6.3
+
+```{r}
+factors = mult.wge(fac1 = 0.8, fac2 = c(1,-0.9))
+phi = factors$model.coef
+theta = -0.5
+
+factor.wge(phi = phi)  # Check
+
+x = 50 + gen.arma.wge(n = 100, phi = phi, theta = theta)
+```
+
+## a
+```{r}
+f = fore.arma.wge(x, phi = phi, theta = theta, n.ahead = 20)
+f$f
+f$ul
+f$ll
+```
+
+## b
+
+* The forecasts are damped sinusoidals and are due to the complex root in the characteristic equation (dominant root). 
+* The effect of the real root is not very prominent since it is further away from the unit circle. 
+
+## c
+```{r}
+n = length(x)
+n.ahead = 10
+f = fore.arma.wge(x, phi=phi, theta = theta, n.ahead = n.ahead, limits=FALSE, lastn = TRUE)
+ase = mean((x[(n-n.ahead+1):n] - f$f)^2)
+ase
+```
+
+* The forecasts show sinusoidal behavior similar to the realization, but are regressing to the mean of the realization (mean = 50). This is not true of the actual realization for the same points (in that short period, they are not moving towards the mean, even though they may do that in the long run.)
+
+## d
+
+```{r}
+f = fore.arma.wge(x, phi=phi, theta = theta, n.ahead = n.ahead, limits=TRUE, lastn = TRUE)
+```
+
+```{r}
+# results = cbind(f$f, f$ll, f$ul, x[(n-n.ahead+1):n])
+# results = data.frame(results)
+# names(results) = c("Forecast", "Lower Limit", "Upper Limit", "Actual")
+# 
+# results = results %>% 
+#   mutate(ll_satisfied = ifelse(Actual >= `Lower Limit`, TRUE, FALSE),
+#          ul_satisfied = ifelse(Actual <= `Upper Limit`, TRUE, FALSE),
+#          within_limits = ifelse(ll_satisfied & ul_satisfied, TRUE, FALSE))
+# 
+# results
+
+comparison = cbind(f$f, f$ll, f$ul, x[(n-n.ahead+1):n])
+comparison = data.frame(comparison)
+names(comparison) = c("Forecast", "Lower Limit", "Upper Limit", "Actual")
+comparison = comparison %>% 
+  mutate(ll_satisfied = ifelse(Actual >= `Lower Limit`, TRUE, FALSE),
+         ul_satisfied = ifelse(Actual <= `Upper Limit`, TRUE, FALSE),
+         within_limits = ifelse(ll_satisfied & ul_satisfied, TRUE, FALSE))
+
+comparison
+
+```
+
+
+* However, if we look at the 95% confidence interval, we see that the prediction is much more reasonable in that case. Still the further out we go, the actual values tend to be outside the 95% forecast limits.
+
+# Problem 6.4
+
+```{r}
+phi = -0.5
+x = 50 + gen.aruma.wge(n = 100, phi = phi, d = 1, s = 4)
+```
+
+## a
+```{r}
+n.ahead = 10
+f = fore.aruma.wge(x, phi = phi, d = 1, s = 4, n.ahead = n.ahead)
+```
+
+## b
+```{r}
+n = length(x)
+n.ahead = 10
+
+f = fore.aruma.wge(x, phi = phi, d = 1, s = 4, n.ahead = n.ahead, lastn = TRUE, limits = FALSE)
+ase = mean((x[(n-n.ahead+1):n] - f$f)^2)
+ase
+
+```
+
+* The forecasts are fairly accurate in this case, especially for the 1st few points. 
+* As we move away from the last known point (90 in this case), the forecast error tends to increase.
+
+## c
+```{r}
+n = length(x)
+n.ahead = 10
+
+f = fore.aruma.wge(x, phi = phi, d = 1, s = 4, n.ahead = n.ahead, lastn = TRUE, limits = TRUE)
+
+# results = cbind(f$f, f$ll, f$ul, x[(n-n.ahead+1):n])
+# results = data.frame(results)
+# names(results) = c("Forecast", "Lower Limit", "Upper Limit", "Actual")
+# results = results %>% 
+#   mutate(ll_satisfied = ifelse(Actual >= `Lower Limit`, TRUE, FALSE),
+#          ul_satisfied = ifelse(Actual <= `Upper Limit`, TRUE, FALSE),
+#          within_limits = ifelse(ll_satisfied & ul_satisfied, TRUE, FALSE))
+# 
+# results
+
+
+comparison = cbind(f$f, f$ll, f$ul, x[(n-n.ahead+1):n])
+comparison = data.frame(comparison)
+names(comparison) = c("Forecast", "Lower Limit", "Upper Limit", "Actual")
+comparison = comparison %>% 
+  mutate(ll_satisfied = ifelse(Actual >= `Lower Limit`, TRUE, FALSE),
+         ul_satisfied = ifelse(Actual <= `Upper Limit`, TRUE, FALSE),
+         within_limits = ifelse(ll_satisfied & ul_satisfied, TRUE, FALSE))
+
+comparison
+
+```
+
+* Most of the values are outside the limit. This may be due to the fact that the realization had an upward trend just before the forecast started. Hence we see that most of the points that lie outside the limits are violating the lower limit since the forecast is higher than the actual.
+
+# Problem 6.7
+```{r}
+data("sunspot.classic")
+data %>%glimpse()
+
+x = sunspot.classic
+
+n = length(x)
+n.ahead = 30
+```
+
+## a
+
+### Model 1
+```{r}
+phi = c(1.42, -0.73)
+factor.wge(phi)
+f = fore.arma.wge(x = x, phi = phi, n.ahead = n.ahead)
+```
+
+### Model 2
+
+```{r}
+phi = c(1.23, -0.47, -0.14, 0.16, -0.14, 0.07, -0.13, 0.21)
+factor.wge(phi)
+f = fore.arma.wge(x = x, phi = phi, n.ahead = n.ahead)
+```
+
+
+### Model 3
+```{r}
+lambda = c(1.646, -1)
+phi = c(-0.37, -0.11, 0.03, 0.29, 0.31, 0.27)
+
+factor.wge(lambda)
+factor.wge(phi)
+
+f = fore.aruma.wge(x = x, phi = phi, lambda = lambda, n.ahead = n.ahead)
+```
+
+
+
+### Conclusions
+
+* (i) Model 3 seems to be the best fit for the data.
+* (ii) All 3 models have a system frequency at ~0.09 which is the frequency of the sunspot data. However, in the 1st model, the root is furthest away from the unit circle (0.85). Hence, the sinusoidal behavior associated with it is no sustained. In the 2nd model, the root associated with this frequency is closer to the unit circle (~0.95), hence its effect is more sustained, though it eventually begins to damp out. In the 3rd model, the root associated with this frequency is right on the unit circle, hence this behavior is sustained over many time points (and this matched with the realization well)
+* (iii) Based on this, we would prefer the 3rd model. The 1st model is the poorest.
+
+## b
+
+```{r}
+n = length(x)
+n.ahead = 50
+
+results = tribble(~model, ~ASE)
+```
+
+### Model 1
+```{r}
+phi = c(1.42, -0.73)
+f = fore.arma.wge(x = x, phi = phi, n.ahead = n.ahead, lastn = TRUE)
+ase = mean((x[(n-n.ahead+1):n] - f$f)^2)
+ase
+
+results = results %>% add_row(model = "Model 1", ASE = ase)
+
+
+comparison = cbind(f$f, f$ll, f$ul, x[(n-n.ahead+1):n])
+comparison = data.frame(comparison)
+names(comparison) = c("Forecast", "Lower Limit", "Upper Limit", "Actual")
+comparison = comparison %>% 
+  mutate(ll_satisfied = ifelse(Actual >= `Lower Limit`, TRUE, FALSE),
+         ul_satisfied = ifelse(Actual <= `Upper Limit`, TRUE, FALSE),
+         within_limits = ifelse(ll_satisfied & ul_satisfied, TRUE, FALSE))
+
+comparison
+```
+
+### Model 2
+
+```{r}
+
+phi = c(1.23, -0.47, -0.14, 0.16, -0.14, 0.07, -0.13, 0.21)
+f = fore.arma.wge(x = x, phi = phi, n.ahead = n.ahead, lastn = TRUE)
+ase = mean((x[(n-n.ahead+1):n] - f$f)^2)
+ase
+
+results = results %>% add_row(model = "Model 2", ASE = ase)
+
+
+comparison = cbind(f$f, f$ll, f$ul, x[(n-n.ahead+1):n])
+comparison = data.frame(comparison)
+names(comparison) = c("Forecast", "Lower Limit", "Upper Limit", "Actual")
+comparison = comparison %>% 
+  mutate(ll_satisfied = ifelse(Actual >= `Lower Limit`, TRUE, FALSE),
+         ul_satisfied = ifelse(Actual <= `Upper Limit`, TRUE, FALSE),
+         within_limits = ifelse(ll_satisfied & ul_satisfied, TRUE, FALSE))
+
+comparison
+
+
+
+```
+
+
+### Model 3
+
+```{r}
+lambda = c(1.646, -1)
+phi = c(-0.37, -0.11, 0.03, 0.29, 0.31, 0.27)
+f = fore.aruma.wge(x = x, phi = phi, lambda = lambda, n.ahead = n.ahead, lastn = TRUE)
+
+ase = mean((x[(n-n.ahead+1):n] - f$f)^2)
+ase
+
+results = results %>% add_row(model = "Model 3", ASE = ase)
+
+
+comparison = cbind(f$f, f$ll, f$ul, x[(n-n.ahead+1):n])
+comparison = data.frame(comparison)
+names(comparison) = c("Forecast", "Lower Limit", "Upper Limit", "Actual")
+comparison = comparison %>% 
+  mutate(ll_satisfied = ifelse(Actual >= `Lower Limit`, TRUE, FALSE),
+         ul_satisfied = ifelse(Actual <= `Upper Limit`, TRUE, FALSE),
+         within_limits = ifelse(ll_satisfied & ul_satisfied, TRUE, FALSE))
+
+comparison
+```
+
+### Conclusions
+```{r}
+results
+```
+
+* From the ASE calculations, we see that the 2nd and 3rd models dont perform that well and their prediction is very bad compred to model 1.
+* This is due to the fact that although the cyclical behavior, the phase is not aligned (peak's dont align) and this leads to the larger error.
+* On this basis, we would choose Model 1 since it has the best ASE. However, the prediction may only be good for the next few time points (and then settles at the mean).
+
+# Problem 6.8
+
+## a
+
+```{r}
+x = gen.sigplusnoise.wge(n = 50, b0 = 5, b1 = 0.3, phi = c(-0.2, -0.6), vara = 0.5)
+```
+
+```{r}
+n.ahead = 20
+f = fore.sigplusnoise.wge(x = x, linear = TRUE, n.ahead = 20)
+```
+
+```{r}
+x = gen.sigplusnoise.wge(n = 100,
+                         b0 = 50,
+                         coef = c(5, 0), freq = c(0.1, 0), psi = c(2.5, 0),
+                         phi = c(-0.7), vara = 1)
+```
+
+```{r}
+n.ahead = 20
+f = fore.sigplusnoise.wge(x = x, linear = FALSE, freq = c(0.1, 0), n.ahead = 20)
+```
