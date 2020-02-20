@@ -192,6 +192,8 @@ f = fore.arma.wge(x = data$arr_delay, phi = phi, n.ahead = 25, limits = FALSE)
 phi = c(0.4, -0.6, 0.8)
 lag.max = 3
 psi_wts = psi.weights.wge(phi = phi, lag.max = lag.max)
+
+psi_wts
 psi_wts[lag.max]
 ```
 

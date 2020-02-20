@@ -44,6 +44,7 @@ xt = gen.sigplusnoise.wge(n = 100,
 
 ## Just AR Noise (No Signal)
 ```{r}
+# Zt = (1 - 0.975B)at
 xt = gen.sigplusnoise.wge(n = 100,
                           b0 = 0, b1 = 0, # No Trend (signal)
                           phi = 0.975, vara = 10, # AR(1) Noise

@@ -1,0 +1,150 @@
+---
+title: "Live Session Assignment 7"
+author: "Nikhil Gupta"
+date: "`r Sys.time()`"
+output:
+  word_document:
+    toc: yes
+    toc_depth: '6'
+  html_document:
+    toc: yes
+    toc_depth: 6
+    toc_float: yes
+always_allow_html: yes
+---
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Setup
+
+```{r}
+library(tswge)
+library(dplyr)
+library(tidyverse)
+source("common_functions.R")
+```
+
+
+# For pre-live
+
+## 2
+
+```{r}
+factors = mult.wge(fac1 = 0.9, fac2 = 0.8)
+phi = factors$model.coef
+# factor.wge(phi = phi) # Cross check
+
+psi_wts = psi.weights.wge(phi = phi, lag.max = 5)
+cat("\nPsi Weights: \n")
+print(psi_wts)
+```
+
+
+```{r}
+l = 3
+# For 95% interval of X_t0(3), we need lags will l-1
+multiplier = 1.96 * sqrt(1 + sum(psi_wts[1:l-1]^2))
+cat("\nMultiplier: ")
+cat(multiplier)
+
+# We are still missing the a_t term. How do we compute this?
+# Maybe get from the forecast function 
+# Also, now the calculations are available in tswgewrapped package as well
+
+x = c(5, 8, 9, 8, 7, 6, 4, 3)
+f = fore.arma.wge(x, phi = phi, n.ahead = 3, limits = TRUE)
+
+library(tswgewrapped)
+info = get_all_a_calc(x, phi, theta = 0)
+cat("\nvara (computed tswgewrapped): ")
+cat(info$vara)
+
+vara = f$wnv
+cat("\nvara: ")
+cat(vara)
+
+half_width = sqrt(vara) * multiplier
+cat("\nHalf Width: ")
+cat(half_width)
+
+# Cross Check
+half_width_computed = f$f[3] - f$ll[3]
+cat("\nHalf Width (computed tswge): ")
+cat(half_width_computed)
+```
+
+```{r}
+n.ahead = 8
+f = fore.arma.wge(x, phi = phi, n.ahead = 8, limits = TRUE)
+```
+
+## 3
+
+
+```{r}
+data = read.csv("../MSDS-6373-Time-Series/Unit 7/AmtrakPassengersMonthly.csv")
+data %>% glimpse()
+```
+
+```{r}
+n = nrow(data)
+n.ahead = 12
+data = data$Ridership
+```
+
+```{r}
+results = tribble(~model, ~ASE)
+```
+
+### Model 1
+```{r}
+phi = c(0.5511, 0.1680, -0.0145, 0.0651, 0.1388, -0.2966, 0.1539, 0.1270, -0.1815, 0.0364, 0.1456, 0.6287, -0.3832, -0.0199, -0.1679) 
+theta = 0
+
+f = fore.arma.wge(data, phi=phi, theta = theta, n.ahead=n.ahead, limits=FALSE, lastn = TRUE)
+ase = mean((data[(n-n.ahead+1):n] - f$f)^2)
+ase
+
+results = results %>% add_row(model = "Model 1", ASE = ase)
+```
+
+### Model 2
+```{r}
+phi = c(-0.02709541,  0.74213105)
+theta = c(-0.5844596,  0.3836931)
+
+f = fore.aruma.wge(data, phi=phi, theta = theta, s = 12, n.ahead = n.ahead, limits=FALSE, lastn = TRUE)
+ase = mean((data[(n-n.ahead+1):n] - f$f)^2)
+ase
+
+results = results %>% add_row(model = "Model 2", ASE = ase)
+
+```
+
+### Model 3
+
+```{r}
+phi = c(0.306943)
+theta = c(0.7431719)
+
+f = fore.aruma.wge(data, phi=phi, theta = theta, d = 1, s = 12, n.ahead = n.ahead, limits=FALSE, lastn = TRUE)
+ase = mean((data[(n-n.ahead+1):n] - f$f)^2)
+ase
+
+results = results %>% add_row(model = "Model 3", ASE = ase)
+
+```
+
+### Results
+```{r}
+results
+```
+
+
+```{r}
+
+
+```
