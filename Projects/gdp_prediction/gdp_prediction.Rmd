@@ -1,5 +1,5 @@
 ---
-title: "tidyquant"
+title: "GDP Prediction"
 author: "Nikhil Gupta"
 date: "`r Sys.time()`"
 output:
