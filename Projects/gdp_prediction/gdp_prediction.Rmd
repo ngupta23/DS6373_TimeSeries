@@ -807,6 +807,11 @@ unrate2 %>% glimpse()
 ## EDA
 1. Plot correlation plots with lagged variables to gain insight into what features might be useful predictors.
 
+## Model Analysis
+1. If I take GDP data from way back (1946), the resultsfor ARMA and ARIMA analysis are very different (spectral densities, etc). So, while fitting, should we not do something like 5 fold cross validation?
+2. Use Rolling Window to calculate the ASE inistead of just the last n values. This will give a more robust estimate.
+
+
 ```{r}
 
 
