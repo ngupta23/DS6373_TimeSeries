@@ -777,9 +777,10 @@ write.csv(data, "economic_indicators_all_ex_3mo_china.csv", row.names = FALSE)
 
 ## Questions for Dr. Sadler
 
-1. Some data is quarterly and some if monthly. How do we not lose the monthly granularity and still use the quarterly data? Is this still possible, since our output (GDP) is measured quarterly, i.e. our can we predict quarterly data using monthly frequency of certain variables?
-2. If we expect certain predictors to themselves be non-stationary (such as $ corporate profits), should we convert this to a stationary signal such as % change from las period?
-3. When collecting the data (predictors), some are seasonally adjusted and some are not. If we have a choice, which one should we pick? Does it matter?
+1. Why is ARIMA prediction jumping like that at the beginning
+2. Some data is quarterly and some if monthly. How do we not lose the monthly granularity and still use the quarterly data? Is this still possible, since our output (GDP) is measured quarterly, i.e. our can we predict quarterly data using monthly frequency of certain variables?
+3. If we expect certain predictors to themselves be non-stationary (such as $ corporate profits), should we convert this to a stationary signal such as % change from las period?
+4. When collecting the data (predictors), some are seasonally adjusted and some are not. If we have a choice, which one should we pick? Does it matter?
 
 ## Things to Consider
 
@@ -788,6 +789,20 @@ write.csv(data, "economic_indicators_all_ex_3mo_china.csv", row.names = FALSE)
 
 ## Data Collection
 1. See if the value used during the resampling can be converted to the median value during that period.
+
+* https://cran.r-project.org/web/packages/tidyquant/vignettes/TQ02-quant-integrations-in-tidyquant.html#example-2-use-xts-to.period-to-change-the-periodicity-from-daily-to-monthly
+
+```
+unrate2 = unrate %>%    
+    tq_transmute(mutate_fun = apply.quarterly,
+                 indexAt = index.at,
+                 FUN = median,
+                 col_rename = "unrate") %>% 
+    mutate(date = paste0(year(date), " Q", quarter(date))) 
+# Need to convert date to type 'datetime'
+
+unrate2 %>% glimpse()
+```
 
 ## EDA
 1. Plot correlation plots with lagged variables to gain insight into what features might be useful predictors.

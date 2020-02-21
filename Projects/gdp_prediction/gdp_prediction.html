@@ -255,7 +255,7 @@ div.tocify {
 
 <h1 class="title toc-ignore">tidyquant</h1>
 <h4 class="author">Nikhil Gupta</h4>
-<h4 class="date">2020-02-20 19:31:14</h4>
+<h4 class="date">2020-02-20 19:53:00</h4>
 
 </div>
 
@@ -1349,6 +1349,7 @@ data %&gt;% glimpse()</code></pre>
 <div id="questions-for-dr.sadler" class="section level2">
 <h2>Questions for Dr. Sadler</h2>
 <ol style="list-style-type: decimal">
+<li>Why is ARIMA prediction jumping like that at the beginning</li>
 <li>Some data is quarterly and some if monthly. How do we not lose the monthly granularity and still use the quarterly data? Is this still possible, since our output (GDP) is measured quarterly, i.e. our can we predict quarterly data using monthly frequency of certain variables?</li>
 <li>If we expect certain predictors to themselves be non-stationary (such as $ corporate profits), should we convert this to a stationary signal such as % change from las period?</li>
 <li>When collecting the data (predictors), some are seasonally adjusted and some are not. If we have a choice, which one should we pick? Does it matter?</li>
@@ -1365,6 +1366,18 @@ data %&gt;% glimpse()</code></pre>
 <ol style="list-style-type: decimal">
 <li>See if the value used during the resampling can be converted to the median value during that period.</li>
 </ol>
+<ul>
+<li><a href="https://cran.r-project.org/web/packages/tidyquant/vignettes/TQ02-quant-integrations-in-tidyquant.html#example-2-use-xts-to.period-to-change-the-periodicity-from-daily-to-monthly" class="uri">https://cran.r-project.org/web/packages/tidyquant/vignettes/TQ02-quant-integrations-in-tidyquant.html#example-2-use-xts-to.period-to-change-the-periodicity-from-daily-to-monthly</a></li>
+</ul>
+<pre><code>unrate2 = unrate %&gt;%    
+    tq_transmute(mutate_fun = apply.quarterly,
+                 indexAt = index.at,
+                 FUN = median,
+                 col_rename = &quot;unrate&quot;) %&gt;% 
+    mutate(date = paste0(year(date), &quot; Q&quot;, quarter(date))) 
+# Need to convert date to type 'datetime'
+
+unrate2 %&gt;% glimpse()</code></pre>
 </div>
 <div id="eda" class="section level2">
 <h2>EDA</h2>
