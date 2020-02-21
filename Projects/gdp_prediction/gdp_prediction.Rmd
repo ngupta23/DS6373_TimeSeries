@@ -33,7 +33,7 @@ source("../misc_code_and_datasets/common_functions_tq.R")
 
 
 ```{r}
-from = "1900-01-01"
+from = "1970-01-01"
 ```
 
 # GDP Growth (Seasonally Adjusted)
@@ -69,7 +69,7 @@ px = plotts.sample.wge(data$gdp_change, lag.max = 40)
 
 * Looks like there are several peaks, but if we note carefully, the magnitude is less than 0.
 * Peak at f = 0 is the most appreciable --> so this could come from an ARMA, ARIMA (no seasonality) or an ARIMA (with seasonality model)
-* ACF's have not died down even after lag of at least 32 (8 years!!) --> some indication of extended autocorrelations pointing to a ARIMA model
+* ACF's have not died down even after lag of at least 32 (8 years!!) --> some indication of extended autocorrelations pointing to a ARIMA model  (--> this is using older data)
 
 Let's see various fits to see.
 
@@ -209,6 +209,7 @@ results
 ```{r}
 aggregate.period = "quarters"
 index.at = "yearqtr"
+from = "1900-01-01"  ## Going to increase the horizon since we need more data for NN models
 ```
 
 ## GDP
@@ -239,7 +240,8 @@ gdp_change %>%
     theme_tq()
 ```
 
-## Unemployment Rate
+## LABOR MARKET
+### Unemployment Rate
 ```{r}
 ID = "UNRATE"
 
@@ -267,7 +269,7 @@ unrate %>%
 ```
 
 
-## Non Farm Jobs (Seasonally Adjusted)
+### Non Farm Jobs (Seasonally Adjusted)
 ```{r}
 ID = "PAYEMS"
 
@@ -293,7 +295,9 @@ nfjobs %>%
     theme_tq()
 ```
 
-## 10 yr Treasury Rate
+
+## MONITORY POLICY
+### 10 yr Treasury Rate
 ```{r}
 ID = "DGS10"
 
@@ -323,7 +327,7 @@ treas10yr %>%
     theme_tq()
 ```
 
-## 3 mo Treasury Rate
+### 3 mo Treasury Rate
 ```{r}
 ID = "DGS3MO"
 
@@ -350,7 +354,7 @@ treas3mo %>%
     theme_tq()
 ```
 
-## 10yr - 3mo Treasury
+### 10yr - 3mo Treasury
 ```{r}
 ID = "T10Y3M"
 
@@ -377,7 +381,7 @@ treas10yr3mo %>%
 ```
 
 
-## Federal Funds Interest Rate 
+### Federal Funds Interest Rate 
 
 ```{r}
 ID = "FEDFUNDS"
@@ -405,7 +409,7 @@ fedintrate %>%
 ```
 
 
-## 3 month LIBOR
+### 3 month LIBOR
 ```{r}
 ID = "USD3MTD156N"
 
@@ -431,7 +435,9 @@ libor3mo %>%
     theme_tq()
 ```
 
-## Real Disposable Personal Income Change
+
+## CONSUMER RELATED
+### Real Disposable Personal Income Change
 
 ```{r}
 ID = "A067RO1Q156NBEA"
@@ -458,7 +464,65 @@ personincomechg %>%
     theme_tq()
 ```
 
-## Corporate Profits
+### Consumer Price Index (inflation)
+
+
+```{r}
+ID = "CPIAUCNS"
+
+cpi = tqw_get_fred(ID = ID, from = from)
+cpi %>% glimpse()
+```
+
+```{r}
+cpi = cpi %>%    
+    tq_transmute(mutate_fun = to.period,
+                 period = aggregate.period, 
+                 indexAt = index.at,
+                 col_rename = "cpi")
+
+cpi %>% glimpse()
+```
+
+```{r}
+cpi %>%
+    ggplot(aes(x = date, y = cpi)) +
+    geom_line() +
+    #labs(title = title, y = y_label, x = x_label) + 
+    theme_tq()
+```
+
+### Population
+
+```{r}
+ID = "POPTHM"
+
+population = tqw_get_fred(ID = ID, from = from)
+population %>% glimpse()
+```
+
+```{r}
+population = population %>%    
+    tq_transmute(mutate_fun = to.period,
+                 period = aggregate.period, 
+                 indexAt = index.at,
+                 col_rename = "population")
+
+population %>% glimpse()
+```
+
+```{r}
+population %>%
+    ggplot(aes(x = date, y = population)) +
+    geom_line() +
+    #labs(title = title, y = y_label, x = x_label) + 
+    theme_tq()
+```
+
+
+
+## BUSINESS ENVIRONMENT
+### Corporate Profits
 
 ```{r}
 ID = "CP"
@@ -490,19 +554,195 @@ corpprofitchg %>%
 ```
 
 
+### Crude Oil
+
+```{r}
+ID = "WTISPLC"
+
+crude_wti = tqw_get_fred(ID = ID, from = from)
+crude_wti %>% glimpse()
+```
+
+```{r}
+crude_wti = crude_wti %>%    
+    tq_transmute(mutate_fun = to.period,
+                 period = aggregate.period, 
+                 indexAt = index.at,
+                 col_rename = "crude_wti")
+
+crude_wti %>% glimpse()
+```
+
+```{r}
+crude_wti %>%
+    ggplot(aes(x = date, y = crude_wti)) +
+    geom_line() +
+    #labs(title = title, y = y_label, x = x_label) + 
+    theme_tq()
+```
+### Producer Price Index
+
+```{r}
+ID = "PPIACO"
+
+ppi = tqw_get_fred(ID = ID, from = from)
+ppi %>% glimpse()
+```
+
+```{r}
+ppi = ppi %>%    
+    tq_transmute(mutate_fun = to.period,
+                 period = aggregate.period, 
+                 indexAt = index.at,
+                 col_rename = "ppi")
+
+ppi %>% glimpse()
+```
+
+```{r}
+ppi %>%
+    ggplot(aes(x = date, y = ppi)) +
+    geom_line() +
+    #labs(title = title, y = y_label, x = x_label) + 
+    theme_tq()
+```
+
+
+## MACRO ECONOMIC FACTORS
+
+### Gold
+
+```{r}
+ID = "GOLDAMGBD228NLBM"
+
+gold = tqw_get_fred(ID = ID, from = from)
+gold %>% glimpse()
+```
+
+```{r}
+gold = gold %>%    
+    tq_transmute(mutate_fun = to.period,
+                 period = aggregate.period, 
+                 indexAt = index.at,
+                 col_rename = "gold")
+
+gold %>% glimpse()
+```
+
+```{r}
+gold %>%
+    ggplot(aes(x = date, y = gold)) +
+    geom_line() +
+    #labs(title = title, y = y_label, x = x_label) + 
+    theme_tq()
+```
+
+### Exchange Rate
+
+#### China
+
+```{r}
+ID = "EXCHUS"
+
+china = tqw_get_fred(ID = ID, from = from)
+china %>% glimpse()
+```
+
+```{r}
+china = china %>%    
+    tq_transmute(mutate_fun = to.period,
+                 period = aggregate.period, 
+                 indexAt = index.at,
+                 col_rename = "china")
+
+china %>% glimpse()
+```
+
+```{r}
+china %>%
+    ggplot(aes(x = date, y = china)) +
+    geom_line() +
+    #labs(title = title, y = y_label, x = x_label) + 
+    theme_tq()
+```
+
+#### Japan
+
+```{r}
+ID = "EXJPUS"
+
+japan = tqw_get_fred(ID = ID, from = from)
+japan %>% glimpse()
+```
+
+```{r}
+japan = japan %>%    
+    tq_transmute(mutate_fun = to.period,
+                 period = aggregate.period, 
+                 indexAt = index.at,
+                 col_rename = "japan")
+
+japan %>% glimpse()
+```
+
+```{r}
+japan %>%
+    ggplot(aes(x = date, y = japan)) +
+    geom_line() +
+    #labs(title = title, y = y_label, x = x_label) + 
+    theme_tq()
+```
+
+
+#### UK
+
+```{r}
+ID = "EXUSUK"
+
+uk = tqw_get_fred(ID = ID, from = from)
+uk %>% glimpse()
+```
+
+```{r}
+uk = uk %>%    
+    tq_transmute(mutate_fun = to.period,
+                 period = aggregate.period, 
+                 indexAt = index.at,
+                 col_rename = "uk")
+
+uk %>% glimpse()
+```
+
+```{r}
+uk %>%
+    ggplot(aes(x = date, y = uk)) +
+    geom_line() +
+    #labs(title = title, y = y_label, x = x_label) + 
+    theme_tq()
+```
+
+
 # Merge Data
 
 ```{r}
 dfs = list(gdp_change = gdp_change,
-           unrate = unrate,
-           nfjobs = nfjobs,
-           treas10yr = treas10yr,
-           treas3mo = treas3mo,
-           treas10yr3mo = treas10yr3mo,
-           fedintrate = fedintrate,
-           libor3mo = libor3mo,
-           personincomechg = personincomechg,
-           corpprofitchg = corpprofitchg
+           labor_unrate = unrate,
+           labor_nfjobs = nfjobs,
+           monitory_treas10yr = treas10yr,
+           # monitory_treas3mo = treas3mo,
+           # monitory_treas10yr3mo = treas10yr3mo,
+           monitory_fedintrate = fedintrate,
+           # monitory_libor3mo = libor3mo,
+           consumer_personincomechg = personincomechg,
+           consumer_cpi = cpi,
+           consumer_population = population,
+           business_corpprofitchg = corpprofitchg,
+           business_ccrude_wti = crude_wti,
+           business_ppi = ppi,
+           macro_gold = gold,
+           macro_exc_japan = japan,
+           # macro_exc_china = china,
+           macro_exc_uk = uk
            )
 
 for (i in 1:length(dfs)){
@@ -530,8 +770,27 @@ tail(data)
 * So we may need to change the gdp column to a lagged gdp column (for next quarter). We will evaluate how to do this.
 
 ```{r}
-write.csv(data, "economic_indicators.csv", row.names = FALSE)
+write.csv(data, "economic_indicators_all_ex_3mo_china.csv", row.names = FALSE)
 ```
+
+# TODO
+
+## Questions for Dr. Sadler
+
+1. Some data is quarterly and some if monthly. How do we not lose the monthly granularity and still use the quarterly data? Is this still possible, since our output (GDP) is measured quarterly, i.e. our can we predict quarterly data using monthly frequency of certain variables?
+2. If we expect certain predictors to themselves be non-stationary (such as $ corporate profits), should we convert this to a stationary signal such as % change from las period?
+3. When collecting the data (predictors), some are seasonally adjusted and some are not. If we have a choice, which one should we pick? Does it matter?
+
+## Things to Consider
+
+1. Consider removing the data related to the 3mo Treasury Rate (since it only has 137 quarterly observations) and China Exchange Rate (it only has < 160 quarterly observations and also this data was controlled artificially for a while). If we remove these we can increase our dataset to close to 200 observations (almost 50% increase).
+
+
+## Data Collection
+1. See if the value used during the resampling can be converted to the median value during that period.
+
+## EDA
+1. Plot correlation plots with lagged variables to gain insight into what features might be useful predictors.
 
 ```{r}
 
