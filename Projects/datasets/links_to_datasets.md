@@ -9,10 +9,16 @@ This link has access to several datasets for automotive, engineering and manufac
 * Machine Failure: 
     - https://bigml.com/user/czuriaga/gallery/dataset/587d062d49c4a16936000810
     - Model: https://bigml.com/user/czuriaga/gallery/model/587d0f3049c4a1693200152c/tree
+* Hard Disk Failures
+    - BackBlaze: 
+        - https://www.backblaze.com/b2/hard-drive-test-data.html
+        - Look at the bottom: Downloading the Raw Hard Drive Test Data
     
     
 Kaggle
 
 * BOSCH Production Line Performance: https://www.kaggle.com/c/bosch-production-line-performance/data
 * Air Pressure System Failure: https://www.kaggle.com/uciml/aps-failure-at-scania-trucks-data-set
+
+
 
