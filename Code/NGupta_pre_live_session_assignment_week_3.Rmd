@@ -54,7 +54,7 @@ check_stationarity(data, title = "Walmart Sales Store 8 Item 1", ylab = "Sales")
 ```{r}
 p = plotts.sample.wge(data) # can not control the truncation with this, hence use parzen.wge to increase the truncation to see more details
 length(data)
-parzen.wge(data, trunc = 500)  
+px = parzen.wge(data, trunc = 500)  
 ```
 
 

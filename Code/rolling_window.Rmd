@@ -1,0 +1,204 @@
+---
+title: "Rolling Window"
+author: "Nikhil Gupta"
+date: "`r Sys.time()`"
+output:
+  html_document:
+    toc: yes
+    toc_depth: 6
+    toc_float: yes
+  word_document:
+    toc: yes
+    toc_depth: '6'
+always_allow_html: yes
+---
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Setup
+
+```{r}
+library(tswge)
+# library(tswgewrapped)
+library(dplyr)
+library(tidyverse)
+library(DT)
+library(ggplot2)
+# source("common_functions.R")
+```
+
+```{r}
+sliding_ase = function(x, phi = 0, theta = 0, d = 0, s = 0, n.ahead = NA, batch_size = NA){
+  # Sliding CV ... batches are mutually exclusive
+  
+  n = length(x)
+  
+  if (is.na(batch_size)){
+    warning("Batch Size has not been specified. Will assume a single batch")
+    cat("\n")
+    batch_size = n
+  }
+  
+  if (is.na(n.ahead)){
+    stop("Number of points to be used for forecasting has not been specified. Please specify n.ahead")
+  }
+  
+  start = 1
+  num_batches = n-batch_size+1
+  ASEs = numeric(num_batches)
+  
+  for (i in 0:(num_batches-1))
+  {
+    subset = x[start:(batch_size+i)]
+    test_data = x[(batch_size+i-n.ahead+1):(batch_size+i)]
+    
+    # print(paste("i: ", i, "Start: ", start, " Stop: ", batch_size+i))
+    # print(paste(" Test Start: ", (batch_size+i-n.ahead+1),  "Test End: ", (batch_size+i)))
+    
+    forecasts = fore.aruma.wge(x = subset, phi = phi, theta = theta, d = d, s = s,
+                               n.ahead = n.ahead, lastn = TRUE, plot = FALSE)
+    ASEs[i+1] = mean((test_data - forecasts$f)^2)
+    start = start+1
+  }
+  
+  return(ASEs)
+}
+
+```
+
+# Sliding Window
+
+```{r}
+amtrack = read.csv(file = "../MSDS-6373-Time-Series/Unit 7/AmtrakPassengersMonthly.csv")
+amtrack %>% glimpse()
+```
+
+
+```{r}
+x = amtrack$Ridership
+n = length(x)
+n.ahead = 12
+
+results = tribble(~model, ~ASEs, ~ASE_mean, ~ASE_sd) # Placeholder for results
+```
+
+## Model 1
+```{r}
+phi = c(0.5511, 0.1680, -0.0145, 0.0651, 0.1388, -0.2966, 0.1539, 0.1270, -0.1815, 0.0364, 0.1456, 0.6287, -0.3832, -0.0199, -0.1679)
+theta = 0
+d = 0
+s = 0
+
+# Without Sliding Window (usual method)
+f = fore.aruma.wge(x, phi=phi, theta = theta,  d = d, s = s,
+                   n.ahead = n.ahead, limits=FALSE, lastn = TRUE, plot = FALSE)
+ase = mean((x[(n-n.ahead+1):n] - f$f)^2)
+ase
+
+# Default with sliding window function
+# Assumes only 1 batch, so results must match the one without sliding window (usual method) above
+ASEs = sliding_ase(x, phi = phi, theta = theta, d = d, s = s, n.ahead = n.ahead)  
+ASEs
+
+# With Sliding Window of batch_size 50
+batch_size = 50
+ASEs = sliding_ase(x, phi = phi, theta = theta, d = d, s = s, n.ahead = n.ahead, batch_size = batch_size)
+# ASEs
+# mean(ASEs)
+# sd(ASEs)
+
+results = results %>% add_row(model = "Model 1", ASEs = ASEs, ASE_mean = mean(ASEs), ASE_sd = sd(ASEs))
+
+```
+
+## Model 2
+```{r}
+phi = c(-0.02709541,  0.74213105)
+theta = c(-0.5844596,  0.3836931)
+d = 0
+s = 12
+
+# Without Sliding Window (usual method)
+f = fore.aruma.wge(x, phi=phi, theta = theta,  d = d, s = s,
+                   n.ahead = n.ahead, limits=FALSE, lastn = TRUE, plot = FALSE)
+ase = mean((x[(n-n.ahead+1):n] - f$f)^2)
+ase
+
+# Default with sliding window function
+# Assumes only 1 batch, so results must match the one without sliding window (usual method) above
+ASEs = sliding_ase(x, phi = phi, theta = theta, d = d, s = s, n.ahead = n.ahead)  
+ASEs
+
+# With Sliding Window of batch_size 50
+batch_size = 50
+ASEs = sliding_ase(x, phi = phi, theta = theta, d = d, s = s, n.ahead = n.ahead, batch_size = batch_size)
+# ASEs
+# mean(ASEs)
+# sd(ASEs)
+
+results = results %>% add_row(model = "Model 2", ASEs = ASEs, ASE_mean = mean(ASEs), ASE_sd = sd(ASEs))
+
+```
+
+## Model 3
+
+```{r}
+phi = c(0.306943)
+theta = c(0.7431719)
+d = 1
+s = 12
+
+# Without Sliding Window (usual method)
+f = fore.aruma.wge(x, phi=phi, theta = theta,  d = d, s = s,
+                   n.ahead = n.ahead, limits=FALSE, lastn = TRUE, plot = FALSE)
+ase = mean((x[(n-n.ahead+1):n] - f$f)^2)
+ase
+
+# Default with sliding window function
+# Assumes only 1 batch, so results must match the one without sliding window (usual method) above
+ASEs = sliding_ase(x, phi = phi, theta = theta, d = d, s = s, n.ahead = n.ahead)  
+ASEs
+
+# With Sliding Window of batch_size 50
+batch_size = 50
+ASEs = sliding_ase(x, phi = phi, theta = theta, d = d, s = s, n.ahead = n.ahead, batch_size = batch_size)
+# ASEs
+# mean(ASEs)
+# sd(ASEs)
+
+results = results %>% add_row(model = "Model 3", ASEs = ASEs, ASE_mean = mean(ASEs), ASE_sd = sd(ASEs))
+
+```
+
+## Comparison
+
+```{r}
+DT::datatable(results)
+```
+
+```{r}
+ggplot(results, aes(x = model, y = ASEs, color = model)) + geom_boxplot()
+```
+
+```{r}
+results %>% 
+  group_by(model) %>% 
+  summarise(ASE_mean = mean(ASE_mean), ASE_sd = mean(ASE_sd))
+```
+
+## Analysis of Variance
+
+```{r}
+res.aov = aov(ASEs ~ model, data = results)
+summary(res.aov)
+```
+
+## Tukey HSD
+
+```{r}
+TukeyHSD(res.aov)
+```
+

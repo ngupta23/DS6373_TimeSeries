@@ -37,73 +37,6 @@ theta = c(0.2, -0.9)
 ## a
 ```{r}
 
-compute_a = function(x, phi, theta, index){
-  
-  ## Limit 1
-  get_a_i_lesseq_p = function(index){
-    all_a = rep(0,index)  # Return all 0s till the index
-    return(all_a)
-  }
-  
-  ## Limit 2
-  get_a_i_lesseq_lenX = function(x, p, q, phi, theta, index){
-    all_a = get_a_i_lesseq_p(p)  ## get all 0's till p
-    
-    ## Then compute the values one by one till needed
-    limit = min(index, length(x))
-    for (i in (p+1):limit){
-        a = x[i] - sum(phi * x[(i-1):(i-p)]) + sum(theta * all_a[(i-1):(i-q)]) - (1 - sum(phi)) * mean(x)
-        all_a = c(all_a, a)
-    }
-    
-    return(all_a)
-  }
-  
-  ## Limit 3
-  get_a_i_more_lenX = function(x, p, q, phi, theta, index){
-    n = length(x)
-    all_a = get_a_i_lesseq_lenX(x, p, q, phi, theta, n)  ## Get all values till len(x)
-    all_a = c(all_a, rep(0, (index-n)))  ## Then append 0s after that
-    return(all_a)
-  }
-  
-  
-  p = length(phi)
-  q = length(theta)
-
-  all_a = c()
-  
-  if (index <= p){
-    all_a = get_a_i_lesseq_p(index)
-  }
-  else if (index <= length(x)){
-    all_a = get_a_i_lesseq_lenX(x, p, q, phi, theta, index)
-  }
-  else{
-    all_a = get_a_i_more_lenX(x, p, q, phi, theta, index)
-  }
-  
-  return(all_a)
-}
-
-compute_vara = function(all_a){
-  subset = all_a[all_a != 0]
-  len_subset = length(subset)
-  vara = sum(subset^2)/length(subset)
-  return(vara)
-}
-
-compute_stda = function(all_a){
-  return(sqrt(compute_vara(all_a)))
-}
-
-return_all_a_calc = function(x, phi, theta, index){
-  all_a = compute_a(x = x, phi = phi, theta = theta, index = index)
-  vara = compute_vara(all_a)
-  stda = compute_stda(all_a)
-  return(list(all_a = all_a, vara = vara, stda = stda))
-}
-
 rv = return_all_a_calc(x, phi, theta, 11)
 rv
 
@@ -150,7 +83,8 @@ ase = mean((x[(n-n.ahead+1):n] - f$f)^2)
 ase
 ```
 
-* The forecasts show sinusoidal behavior similar to the realization, but are regressing to the mean of the realization (mean = 50). This is not true of the actual realization for the same points (in that short period, they are not moving towards the mean, even though they may do that in the long run.)
+* The forecasts show sinusoidal behavior similar to the realization, but are regressing to the mean of the realization (mean = 50). This is not true of the actual realization for the same points (in that short period, they are not moving towards the mean, even though they may do that in the long run). 
+* Also the frequency of the predicted data is not matching well with the frequency in the realization so there is an offset (horizontal) in the predictions (peaks and valleys dont line up). 
 
 ## d
 
@@ -159,17 +93,6 @@ f = fore.arma.wge(x, phi=phi, theta = theta, n.ahead = n.ahead, limits=TRUE, las
 ```
 
 ```{r}
-# results = cbind(f$f, f$ll, f$ul, x[(n-n.ahead+1):n])
-# results = data.frame(results)
-# names(results) = c("Forecast", "Lower Limit", "Upper Limit", "Actual")
-# 
-# results = results %>% 
-#   mutate(ll_satisfied = ifelse(Actual >= `Lower Limit`, TRUE, FALSE),
-#          ul_satisfied = ifelse(Actual <= `Upper Limit`, TRUE, FALSE),
-#          within_limits = ifelse(ll_satisfied & ul_satisfied, TRUE, FALSE))
-# 
-# results
-
 comparison = cbind(f$f, f$ll, f$ul, x[(n-n.ahead+1):n])
 comparison = data.frame(comparison)
 names(comparison) = c("Forecast", "Lower Limit", "Upper Limit", "Actual")
@@ -218,17 +141,6 @@ n = length(x)
 n.ahead = 10
 
 f = fore.aruma.wge(x, phi = phi, d = 1, s = 4, n.ahead = n.ahead, lastn = TRUE, limits = TRUE)
-
-# results = cbind(f$f, f$ll, f$ul, x[(n-n.ahead+1):n])
-# results = data.frame(results)
-# names(results) = c("Forecast", "Lower Limit", "Upper Limit", "Actual")
-# results = results %>% 
-#   mutate(ll_satisfied = ifelse(Actual >= `Lower Limit`, TRUE, FALSE),
-#          ul_satisfied = ifelse(Actual <= `Upper Limit`, TRUE, FALSE),
-#          within_limits = ifelse(ll_satisfied & ul_satisfied, TRUE, FALSE))
-# 
-# results
-
 
 comparison = cbind(f$f, f$ll, f$ul, x[(n-n.ahead+1):n])
 comparison = data.frame(comparison)
@@ -395,6 +307,7 @@ n.ahead = 20
 f = fore.sigplusnoise.wge(x = x, linear = TRUE, n.ahead = 20)
 ```
 
+## b
 ```{r}
 x = gen.sigplusnoise.wge(n = 100,
                          b0 = 50,

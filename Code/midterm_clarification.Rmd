@@ -1,0 +1,102 @@
+---
+title: "Live Session Assignment 7"
+author: "Nikhil Gupta"
+date: "`r Sys.time()`"
+output:
+  word_document:
+    toc: yes
+    toc_depth: '6'
+  html_document:
+    toc: yes
+    toc_depth: 6
+    toc_float: yes
+always_allow_html: yes
+---
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Setup
+
+```{r}
+library(tswge)
+library(dplyr)
+library(tidyverse)
+source("common_functions.R")
+```
+
+# My Calculations
+```{r}
+# Imaginary Roots
+theta = c(2, -1.5)
+factor.wge(phi = theta)
+```
+
+
+```{r}
+acf1 = true.arma.aut.wge(theta = theta)
+
+# Non Invertible since abs reciprocal > 1 for one of the roots
+# The invertible model will have the reciprocal of the current roots
+
+# Original Roots
+root1_org = complex(real = 0.6667, imaginary = 0.4714)
+root2_org = complex(real = 0.6667, imaginary = -0.4714)
+
+# Inverse of the roots
+inv_root1 = 1/root1_org
+inv_root2 = 1/root2_org  
+
+inv_root1
+inv_root2
+```
+
+
+```{r}
+# Compute Characteristic Equation
+prod = inv_root1 * inv_root2
+prod 
+
+# Char equation: (z - inv_root1) * (z - inv_root2)
+# = [Z - (1 -0.707i)] * [Z - (1 + 0.717i)]
+# = Z^2 -Z -0.717i*Z -Z +0.717i*Z + prod
+# = Z^2 -2Z + 1.5 
+# = 1 -1.3333Z + 0.6667Z^2
+
+theta = c(1.333, -0.667)
+factor.wge(phi = theta)
+```
+
+```{r}
+acf2 = true.arma.aut.wge(theta = theta)
+
+print(paste0("Are the ACFs for the 2 models equal: ", all(round(acf1$acf,3) == round(acf2$acf,3))))
+cat("\n------------------------------\n")
+print(acf1$acf)
+cat("\n------------------------------\n")
+print(acf2$acf)
+```
+
+
+# Answer provided in HW Solutions
+
+```{r}
+theta = c(-1.333, -0.667)
+factor.wge(phi = theta)
+```
+
+```{r}
+acf3 = true.arma.aut.wge(theta = theta)
+
+print(paste0("Are the ACFs for the 2 models equal: ", all(round(acf1$acf,3) == round(acf3$acf,3))))
+cat("\n------------------------------\n")
+print(acf1$acf)
+cat("\n------------------------------\n")
+print(acf3$acf)
+```
+
+```{r}
+
+```

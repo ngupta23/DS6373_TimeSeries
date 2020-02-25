@@ -265,4 +265,8 @@ f$ul[30]
 ```
 
 
+```{r}
+# Just an example of sinusoidal signal
+f = fore.sigplusnoise.wge(x = data$Adj.Close, linear = FALSE, freq = 0.1, max.p = 5, n.ahead = 30)
+```
 

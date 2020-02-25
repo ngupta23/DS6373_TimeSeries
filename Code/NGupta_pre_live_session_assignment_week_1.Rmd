@@ -49,6 +49,10 @@ check_stationarity(data, title = "Electricity Consumption for Nikhil's House", y
 
 
 ```{r}
-plotts.sample.wge(data)
+px = plotts.sample.wge(data)
+```
+
+```{r}
+
 ```
 

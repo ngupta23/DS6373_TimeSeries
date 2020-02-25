@@ -112,6 +112,10 @@ px = plotts.sample.wge(x)
 # Lots of Peaks and a few dips, so we will increase the limits
 grid = aic5.wge(x, p = 0:15, q = 0:5)
 grid
+
+# Default
+grid = aic5.wge(x)
+grid
 ```
 
 # Live Session

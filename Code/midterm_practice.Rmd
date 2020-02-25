@@ -1,0 +1,653 @@
+---
+title: "Midterm Practice"
+author: "Nikhil Gupta"
+date: "`r Sys.time()`"
+output:
+  word_document:
+    toc: yes
+    toc_depth: '6'
+  html_document:
+    toc: yes
+    toc_depth: 6
+    toc_float: yes
+always_allow_html: yes
+---
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Setup
+
+```{r}
+library(tswge)
+library(tswgewrapped)
+library(dplyr)
+library(tidyverse)
+library(DT)
+source("common_functions.R")
+```
+
+
+# Practice Questions
+
+## Breakout 1
+
+```{r}
+x = c(6, 8, 13, 12, 10, 7, 4, 2)
+
+x - mean(x)
+(x - mean(x))^2
+sum((x - mean(x))^2)
+g0 = sum((x - mean(x))^2) / length(x)
+g0
+
+calculate_ts_gamma0(x)
+```
+
+```{r}
+
+
+calculate_ts_gamma(x, 0)
+calculate_ts_gamma(x, 1)
+
+calculate_ts_rho(x, 0)
+calculate_ts_rho(x, 1)
+calculate_ts_rho(x, 2)
+
+# Compare to package output
+px = plotts.sample.wge(x)
+px$autplt
+
+```
+
+```{r}
+phi = 0.5
+f = fore.arma.wge(x, phi = phi, n.ahead = 5)
+f$f
+```
+
+## Breakout 5
+```{r}
+data("sunspot.year")
+x = sunspot.year
+str(x)
+```
+
+```{r}
+px = plotts.sample.wge(x)
+```
+
+
+
+
+
+```{r}
+aic5.wge(x)
+```
+
+
+
+```{r}
+n = length(x)
+n.ahead = 10
+results = tribble(~model, ~ASE) # Placeholder for results
+```
+
+
+
+```{r}
+phi = c(0.732, 0.283, -0.519)
+theta = c(-0.6)
+
+factor.wge(phi)
+factor.wge(theta)
+
+f = fore.arma.wge(x, phi=phi, theta = theta,
+                  n.ahead = n.ahead, limits = FALSE, lastn = TRUE)
+
+
+ase = mean((x[(n-n.ahead+1):n] - f$f)^2)
+ase
+
+results = results %>% add_row(model = "Model 1", ASE = ase)
+```
+```{r}
+# phi = 0
+# theta = 0 
+
+f = fore.aruma.wge(x, s = 12, d = 1,
+                   n.ahead = n.ahead, limits = FALSE, lastn = TRUE)
+
+# factor.wge(phi)
+# factor.wge(theta)
+
+ase = mean((x[(n-n.ahead+1):n] - f$f)^2)
+ase
+
+results = results %>% add_row(model = "Model 2", ASE = ase)
+```
+
+```{r}
+phi = c(1.06, -0.4)
+#theta = 0
+
+factor.wge(phi)
+#factor.wge(theta)
+
+f = fore.aruma.wge(x, phi=phi, theta = theta, s = 10,
+                   n.ahead = n.ahead, limits = FALSE, lastn = TRUE)
+
+ase = mean((x[(n-n.ahead+1):n] - f$f)^2)
+ase
+
+results = results %>% add_row(model = "Model 3", ASE = ase)
+```
+
+```{r}
+results
+```
+
+# Summer Midterm
+
+## 1
+
+```{r}
+x = c(6, 8, 13, 12, 10, 7, 4, 2, 1)
+```
+
+
+```{r}
+mean(x)
+calculate_ts_gamma(x, 0)
+```
+
+```{r}
+calculate_ts_gamma(x, 3)
+calculate_ts_rho(x, 3)
+```
+
+```{r}
+phi = c(0.6, -0.4)
+f = fore.arma.wge(x, phi, n.ahead = 5)
+f$f
+```
+
+```{r}
+psi.weights.wge(phi = phi, lag.max = 5)
+```
+
+```{r}
+l = 1
+# For 95% interval of X_t0(1), we need lags will l-1
+multiplier = 1.96 # * sqrt(1 + sum(psi_wts[1:l-1]^2))
+cat("\nMultiplier: ")
+cat(multiplier)
+## 5.747481
+
+```
+
+```{r}
+sqrt(f$wnv) * multiplier
+(f$ul - f$ll)/2
+```
+
+## 21
+```{r}
+data(patemp)
+px = plotts.sample.wge(patemp)
+check_stationarity(patemp)
+
+```
+
+## 28
+```{r}
+factor.wge(c(0.9, -0.4))
+```
+
+## 29
+```{r}
+data("global.temp")
+x = global.temp[100:length(global.temp)]
+```
+
+```{r}
+px = plotts.sample.wge(x)
+```
+
+
+```{r}
+n = length(x)
+n.ahead = 10
+results = tribble(~model, ~ASE) # Placeholder for results
+```
+
+
+```{r}
+f = fore.sigplusnoise.wge(x = x, linear = TRUE, n.ahead = n.ahead, lastn = TRUE)
+
+comparison = cbind(f$f, f$ll, f$ul, x[(n-n.ahead+1):n])
+comparison = data.frame(comparison)
+names(comparison) = c("Forecast", "Lower Limit", "Upper Limit", "Actual")
+comparison = comparison %>% 
+  mutate(half_width = (`Upper Limit` - `Lower Limit`)/2,
+         perc_error = round((Forecast - Actual) / Actual * 100, 2),
+         ll_satisfied = ifelse(Actual >= `Lower Limit`, TRUE, FALSE),
+         ul_satisfied = ifelse(Actual <= `Upper Limit`, TRUE, FALSE),
+         within_limits = ifelse(ll_satisfied & ul_satisfied, TRUE, FALSE))
+comparison
+
+ase = mean((x[(n-n.ahead+1):n] - f$f)^2)
+ase
+
+results = results %>% add_row(model = "Model 1", ASE = ase)
+```
+```{r}
+phi = c(-0.62, 0.06, -0.31)
+theta = c(-0.17, -0.75)
+s = 0
+d = 1
+
+if (!all(phi == 0)) {factor.wge(phi)}
+if (!all(theta == 0)) {factor.wge(theta)}
+
+f = fore.aruma.wge(x, phi=phi, theta = theta,  d = d, s = s,
+                   n.ahead = n.ahead, limits=TRUE, lastn = TRUE)
+
+comparison = cbind(f$f, f$ll, f$ul, x[(n-n.ahead+1):n])
+comparison = data.frame(comparison)
+names(comparison) = c("Forecast", "Lower Limit", "Upper Limit", "Actual")
+comparison = comparison %>% 
+  mutate(half_width = (`Upper Limit` - `Lower Limit`)/2,
+         perc_error = round((Forecast - Actual) / Actual * 100, 2),
+         ll_satisfied = ifelse(Actual >= `Lower Limit`, TRUE, FALSE),
+         ul_satisfied = ifelse(Actual <= `Upper Limit`, TRUE, FALSE),
+         within_limits = ifelse(ll_satisfied & ul_satisfied, TRUE, FALSE))
+comparison
+
+ase = mean((x[(n-n.ahead+1):n] - f$f)^2)
+ase
+
+results = results %>% add_row(model = "Model 2", ASE = ase)
+
+```
+
+```{r}
+results
+```
+
+## Bonus
+```{r}
+theta = c(2, -1.5)
+factor.wge(phi = theta)
+acf1 = plotts.true.wge(theta = theta)
+# acf1$acf
+```
+
+```{r}
+# Original Roots
+root1_org = complex(real = 0.6667, imaginary = 0.4714)
+root2_org = complex(real = 0.6667, imaginary = -0.4714)
+
+
+theta1 = as.numeric(root1_org + root2_org)  # Take the real part by using as.numeric since img = 0
+theta2 = -(abs(root1_org))^2
+
+new_theta = c(theta1, theta2)
+
+factor.wge(phi = new_theta)
+acf2 = plotts.true.wge(theta = new_theta)
+# acf2$acf
+
+```
+```{r}
+print(paste0("Are the ACFs for the 2 models equal: ", all(round(acf1$aut1,3) == round(acf2$aut1,3))))
+print(acf1$aut1)
+print(acf2$aut1)
+
+```
+
+# Fall 2019 Midterm 
+
+## In class
+
+### 1 - 10
+```{r}
+x = c(5 , 9, 13, 15, 14, 10, 12, 17, 20, 25)
+px = plotts.sample.wge(x)
+px$autplt
+```
+
+```{r}
+calculate_ts_gamma(x, 7)
+29.4 * -0.23129252
+
+a = acf(x, type="covariance", plot = FALSE)
+```
+
+```{r}
+mean(x)
+
+phi = c(1.65, -1.06, 0.262)
+f = fore.arma.wge(x, phi = phi, n.ahead = 5)
+f$f
+```
+
+```{r}
+
+psi_wts = psi.weights.wge(phi = phi, lag.max = 5)
+psi_wts
+
+l = 2
+# For 95% interval of X_t0(2), we need lags will l-1
+multiplier = 1.96 * sqrt(1 + sum(psi_wts[1:l-1]^2))
+cat("\nMultiplier: ")
+cat(multiplier)
+
+# White Noise Variance
+# METHOD 1: You can get this directly form the forecast function (tswge)
+vara = f$wnv
+cat("\nvara: ")
+cat(vara)
+
+
+# Half Width Calculation
+half_width = sqrt(vara) * multiplier
+cat("\nHalf Width: ")
+cat(half_width)
+
+# Cross Check with tswge
+half_width_computed = f$f[l] - f$ll[l]
+cat("\nHalf Width (computed tswge): ")
+cat(half_width_computed)
+
+cat("\n")
+f$ll[l]
+f$ul[l]
+
+```
+
+```{r}
+factor.wge(phi = phi)
+
+```
+
+## Take home
+
+```{r}
+electricity = read.csv(file = "../MSDS-6373-Time-Series/Unit 8/electricity.csv")
+electricity %>%  glimpse()
+```
+
+```{r}
+x = electricity$x
+str(x)
+```
+
+```{r}
+px = plotts.sample.wge(x)
+```
+
+```{r}
+check_stationarity(x)
+```
+
+```{r}
+n = length(x)
+# n.ahead = 48 # Next Day
+n.ahead = 48*7 # Next Week
+
+results = tribble(~model, ~ASE) # Placeholder for results
+```
+
+### Model 1
+```{r}
+phi = c(2.0401, -1.2159, 0.1751)
+theta = c(0.9551)
+s = 336
+d = 0
+
+if (!all(phi == 0)) {factor.wge(phi)}
+if (!all(theta == 0)) {factor.wge(theta)}
+
+f = fore.aruma.wge(x, phi=phi, theta = theta,  d = d, s = s,
+                   n.ahead = n.ahead, limits=TRUE, lastn = FALSE)
+
+f = fore.aruma.wge(x, phi=phi, theta = theta,  d = d, s = s,
+                   n.ahead = n.ahead, limits=FALSE, lastn = TRUE)
+
+comparison = cbind(f$f, f$ll, f$ul, x[(n-n.ahead+1):n])
+comparison = data.frame(comparison)
+names(comparison) = c("Forecast", "Lower Limit", "Upper Limit", "Actual")
+comparison = comparison %>% 
+  mutate(half_width = (`Upper Limit` - `Lower Limit`)/2,
+         perc_error = round((Forecast - Actual) / Actual * 100, 2),
+         ll_satisfied = ifelse(Actual >= `Lower Limit`, TRUE, FALSE),
+         ul_satisfied = ifelse(Actual <= `Upper Limit`, TRUE, FALSE),
+         within_limits = ifelse(ll_satisfied & ul_satisfied, TRUE, FALSE))
+comparison
+
+ase = mean((x[(n-n.ahead+1):n] - f$f)^2)
+ase
+
+results = results %>% add_row(model = "Model 1", ASE = ase)
+
+
+```
+
+### Model 2
+```{r}
+phi = c(0.0866, -0.8452, -0.1804)
+theta = c(-0.00026, 0.926)
+s = 336
+d = 1
+
+if (!all(phi == 0)) {factor.wge(phi)}
+if (!all(theta == 0)) {factor.wge(theta)}
+
+f = fore.aruma.wge(x, phi=phi, theta = theta,  d = d, s = s,
+                   n.ahead = n.ahead, limits=TRUE, lastn = FALSE)
+
+f = fore.aruma.wge(x, phi=phi, theta = theta,  d = d, s = s,
+                   n.ahead = n.ahead, limits=FALSE, lastn = TRUE)
+
+comparison = cbind(f$f, f$ll, f$ul, x[(n-n.ahead+1):n])
+comparison = data.frame(comparison)
+names(comparison) = c("Forecast", "Lower Limit", "Upper Limit", "Actual")
+comparison = comparison %>% 
+  mutate(half_width = (`Upper Limit` - `Lower Limit`)/2,
+         perc_error = round((Forecast - Actual) / Actual * 100, 2),
+         ll_satisfied = ifelse(Actual >= `Lower Limit`, TRUE, FALSE),
+         ul_satisfied = ifelse(Actual <= `Upper Limit`, TRUE, FALSE),
+         within_limits = ifelse(ll_satisfied & ul_satisfied, TRUE, FALSE))
+comparison
+
+ase = mean((x[(n-n.ahead+1):n] - f$f)^2)
+ase
+
+results = results %>% add_row(model = "Model 2", ASE = ase)
+```
+
+### Model 3
+```{r}
+freq = 1/(24*2)
+
+f = fore.sigplusnoise.wge(x = x, linear = FALSE, freq = freq, n.ahead = n.ahead, lastn = FALSE, limits = TRUE)
+f = fore.sigplusnoise.wge(x = x, linear = FALSE, freq = freq, n.ahead = n.ahead, lastn = TRUE, limits = FALSE)
+
+comparison = cbind(f$f, f$ll, f$ul, x[(n-n.ahead+1):n])
+comparison = data.frame(comparison)
+names(comparison) = c("Forecast", "Lower Limit", "Upper Limit", "Actual")
+comparison = comparison %>% 
+  mutate(half_width = (`Upper Limit` - `Lower Limit`)/2,
+         perc_error = round((Forecast - Actual) / Actual * 100, 2),
+         ll_satisfied = ifelse(Actual >= `Lower Limit`, TRUE, FALSE),
+         ul_satisfied = ifelse(Actual <= `Upper Limit`, TRUE, FALSE),
+         within_limits = ifelse(ll_satisfied & ul_satisfied, TRUE, FALSE))
+comparison
+
+ase = mean((x[(n-n.ahead+1):n] - f$f)^2)
+ase
+
+results = results %>% add_row(model = "Model 3", ASE = ase)
+
+```
+
+### Comparison
+```{r}
+results
+```
+
+# Sliding Window
+
+```{r}
+amtrack = read.csv(file = "../MSDS-6373-Time-Series/Unit 7/AmtrakPassengersMonthly.csv")
+amtrack %>% glimpse()
+```
+
+
+```{r}
+## My Code
+
+x = amtrack$Ridership
+n = length(x)
+n.ahead = 12
+
+results = tribble(~model, ~ASEs, ~ASE_mean, ~ASE_sd) # Placeholder for results
+```
+
+## Model 1
+```{r}
+phi = c(0.5511, 0.1680, -0.0145, 0.0651, 0.1388, -0.2966, 0.1539, 0.1270, -0.1815, 0.0364, 0.1456, 0.6287, -0.3832, -0.0199, -0.1679)
+theta = 0
+d = 0
+s = 0
+
+# Without Sliding Window (usual method)
+f = fore.aruma.wge(x, phi=phi, theta = theta,  d = d, s = s,
+                   n.ahead = n.ahead, limits=FALSE, lastn = TRUE, plot = FALSE)
+ase = mean((x[(n-n.ahead+1):n] - f$f)^2)
+ase
+
+# Default with sliding window function
+# Assumes only 1 batch, so results must match the one without sliding window (usual method) above
+ASEs = sliding_ase(x, phi = phi, theta = theta, d = d, s = s, n.ahead = n.ahead)  
+ASEs
+
+# With Sliding Window of batch_size 50
+batch_size = 50
+ASEs = sliding_ase(x, phi = phi, theta = theta, d = d, s = s, n.ahead = n.ahead, batch_size = batch_size)
+# ASEs
+# mean(ASEs)
+# sd(ASEs)
+
+results = results %>% add_row(model = "Model 1", ASEs = ASEs, ASE_mean = mean(ASEs), ASE_sd = sd(ASEs))
+
+```
+
+## Model 2
+```{r}
+phi = c(-0.02709541,  0.74213105)
+theta = c(-0.5844596,  0.3836931)
+d = 0
+s = 12
+
+# Without Sliding Window (usual method)
+f = fore.aruma.wge(x, phi=phi, theta = theta,  d = d, s = s,
+                   n.ahead = n.ahead, limits=FALSE, lastn = TRUE, plot = FALSE)
+ase = mean((x[(n-n.ahead+1):n] - f$f)^2)
+ase
+
+# Default with sliding window function
+# Assumes only 1 batch, so results must match the one without sliding window (usual method) above
+ASEs = sliding_ase(x, phi = phi, theta = theta, d = d, s = s, n.ahead = n.ahead)  
+ASEs
+
+# With Sliding Window of batch_size 50
+batch_size = 50
+ASEs = sliding_ase(x, phi = phi, theta = theta, d = d, s = s, n.ahead = n.ahead, batch_size = batch_size)
+# ASEs
+# mean(ASEs)
+# sd(ASEs)
+
+results = results %>% add_row(model = "Model 2", ASEs = ASEs, ASE_mean = mean(ASEs), ASE_sd = sd(ASEs))
+
+```
+
+## Model 3
+
+```{r}
+phi = c(0.306943)
+theta = c(0.7431719)
+d = 1
+s = 12
+
+# Without Sliding Window (usual method)
+f = fore.aruma.wge(x, phi=phi, theta = theta,  d = d, s = s,
+                   n.ahead = n.ahead, limits=FALSE, lastn = TRUE, plot = FALSE)
+ase = mean((x[(n-n.ahead+1):n] - f$f)^2)
+ase
+
+# Default with sliding window function
+# Assumes only 1 batch, so results must match the one without sliding window (usual method) above
+ASEs = sliding_ase(x, phi = phi, theta = theta, d = d, s = s, n.ahead = n.ahead)  
+ASEs
+
+# With Sliding Window of batch_size 50
+batch_size = 50
+ASEs = sliding_ase(x, phi = phi, theta = theta, d = d, s = s, n.ahead = n.ahead, batch_size = batch_size)
+# ASEs
+# mean(ASEs)
+# sd(ASEs)
+
+results = results %>% add_row(model = "Model 3", ASEs = ASEs, ASE_mean = mean(ASEs), ASE_sd = sd(ASEs))
+
+```
+
+## Comparison
+
+```{r}
+DT::datatable(results)
+```
+
+```{r}
+results %>% 
+  group_by(model) %>% 
+  summarise(ASE_mean = mean(ASE_mean), ASE_sd = mean(ASE_sd))
+```
+
+## Analysis of Variance
+```{r}
+res.aov = aov(ASEs ~ model, data = results)
+summary(res.aov)
+```
+
+## Tukey HSD
+
+```{r}
+TukeyHSD(res.aov)
+```
+
+```{r}
+## Dr. Sadler's Code with my correction
+
+# Sliding CV ... batches are mutually exclusive
+ts = amtrack$Ridership
+batch_size = 50
+start = 1
+num_batches = length(ts)-batch_size+1
+ASEs = numeric(num_batches)
+
+for (i in 0: (num_batches-1))
+{
+  forecasts = fore.aruma.wge(ts[start:(batch_size+i)], phi = c(-0.02709541,  0.74213105), theta = c(-0.5844596,  0.3836931), d = 0, s = 12, n.ahead = 12, lastn = TRUE, plot = FALSE)
+  # ASEs[i+1] = mean((ts[start:(batch_size+1)] - forecasts$f)^2)  # This seemed incorrect so it has been fixed
+  ASEs[i+1] = mean((ts[(batch_size+i-n.ahead+1):(batch_size+i)]  - forecasts$f)^2)
+  start = start+1
+}
+
+ASEs
+mean(ASEs)
+sd(ASEs)
+```

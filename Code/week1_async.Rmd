@@ -81,6 +81,15 @@ calculate_ts_mean = function(x){
   return(mean(x))
 }
 
+calculate_ts_mean_confidence_interval = function(x, alpha = 0.05){
+  xbar = calculate_ts_mean(x)
+  vxbar = calculate_ts_var_of_mean(x)
+  multiplier = qnorm(1 - alpha/2)
+  ci = c(xbar - multiplier * sqrt(vxbar), xbar +  multiplier * sqrt(vxbar))
+  return(ci)
+}
+
+
 calculate_ts_var_of_mean = function(x){
   n=length(x) 
   nlag=n-1 
@@ -96,15 +105,6 @@ calculate_ts_var_of_mean = function(x){
   vxbar=2*sum/n + gamma0/n 
   return(vxbar)  
 }
-
-calculate_ts_mean_confidence_interval = function(x, alpha = 0.05){
-  xbar = calculate_ts_mean(x)
-  vxbar = calculate_ts_var_of_mean(x)
-  multiplier = qnorm(1 - alpha/2)
-  ci = c(xbar - multiplier * sqrt(vxbar), xbar +  multiplier * sqrt(vxbar))
-  return(ci)
-}
-
 
 ```
 
@@ -138,6 +138,11 @@ vxbar = calculate_ts_var_of_mean(x)
 print(vxbar)
 ci = calculate_ts_mean_confidence_interval(x)
 print(ci)
+
+```
+
+
+```{r}
 
 ```
 

@@ -82,7 +82,7 @@ x_0.5m = gen.arma.wge(n=200, phi=c(-0.5), vara=1, sn=2)
 p_0.9  = plotts.true.wge(n = 200, phi = 0.9)
 p_0.9m = plotts.true.wge(n = 200, phi = -0.9)
 p_0.5  = plotts.true.wge(n = 200, phi = 0.5)
-p_0.5m = plotts.true.wge(n = 200, phi = -0.9)
+p_0.5m = plotts.true.wge(n = 200, phi = -0.5)
 
 ```
 

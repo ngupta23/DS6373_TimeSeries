@@ -50,34 +50,224 @@ summary(stor9_item50)
 p = plotts.sample.wge(stor9_item50$sales)
 ```
 
-## Model 1 Factors
+
+```{r}
+x = stor9_item50$sales
+n = length(x)
+n.ahead = 30
+results = tribble(~model, ~ASE) # Placeholder for results
+```
+
+## Modeling
+
+* Check if it compares to a factor table with seasonality of 7
+```{r}
+factor.wge(phi = c(rep(0,6),1))
+```
+
+* Yes, it does match with factor table for seasonality of 7. 
+* Let's remove it to see what is left over
+
+```{r}
+dif7 = artrans.wge(x, phi.tr = c(rep(0,6),1))
+px = plotts.sample.wge(dif7)
+```
+
+* Looks like the weekly seasonality is the only component. Rest looks mainly noise (magnitude of peaks is very low). Lets check.
+
+```{r}
+aic5.wge(dif7)
+```
+
+* Looks like the peaks and dips
+
+```{r}
+fit = aic.wge(dif7)
+factor.wge(fit$phi) # AR Component
+factor.wge(fit$theta) # MA Component
+
+```
+
+* AR component models the peaks at 0.26 and 0.34 (less dominant)
+* MA component models the dip at 0.28 (dominant)
+
+## Assignment
+
+* Now we move to the actual assignment for this week which is to see which of the ARMA models below gives the best fit.
+
+### Model 1 Factors
 ```{r}
 phi = c(0.967)
 factor.wge(phi = phi) 
 p = plotts.true.wge(phi = phi)
+
+f = fore.arma.wge(x, phi=phi, n.ahead=n.ahead, limits=FALSE, lastn = TRUE)
+
+# ASE
+ase = mean((x[(n-n.ahead+1):n] - f$f)^2)
+ase
+
+results = results %>% add_row(model = "Model 1", ASE = ase)
+
+# Checking whether within limits
+comparison = cbind(f$f, f$ll, f$ul, x[(n-n.ahead+1):n])
+comparison = data.frame(comparison)
+names(comparison) = c("Forecast", "Lower Limit", "Upper Limit", "Actual")
+comparison = comparison %>% 
+  mutate(ll_satisfied = ifelse(Actual >= `Lower Limit`, TRUE, FALSE),
+         ul_satisfied = ifelse(Actual <= `Upper Limit`, TRUE, FALSE),
+         within_limits = ifelse(ll_satisfied & ul_satisfied, TRUE, FALSE))
+
+comparison
+
 ```
 
 
-## Model 2 Factors
+### Model 2 Factors
 ```{r}
 phi = c(1.452, -0.453, -0.294, 0.175, 0.237, -0.154)
 factor.wge(phi = phi) 
 p = plotts.true.wge(phi = phi)
 
+f = fore.arma.wge(x, phi=phi, n.ahead=n.ahead, limits=FALSE, lastn = TRUE)
+
+# ASE
+ase = mean((x[(n-n.ahead+1):n] - f$f)^2)
+ase
+
+results = results %>% add_row(model = "Model 2", ASE = ase)
+
+# Checking whether within limits
+comparison = cbind(f$f, f$ll, f$ul, x[(n-n.ahead+1):n])
+comparison = data.frame(comparison)
+names(comparison) = c("Forecast", "Lower Limit", "Upper Limit", "Actual")
+comparison = comparison %>% 
+  mutate(ll_satisfied = ifelse(Actual >= `Lower Limit`, TRUE, FALSE),
+         ul_satisfied = ifelse(Actual <= `Upper Limit`, TRUE, FALSE),
+         within_limits = ifelse(ll_satisfied & ul_satisfied, TRUE, FALSE))
+
+comparison
+
 ```
 
-## Model 3 Factors
+### Model 3 Factors
 ```{r}
 phi = c(1.445, -0.411, -0.038, 0.17, 0.362, -0.245, -0.177, 0.213)
 factor.wge(phi = phi) # Not stationary
 # p = plotts.true.wge(phi = phi)
 ```
 
-## Model 4 Factors
+### Model 4 Factors
 ```{r}
 phi = c(1.384, -0.359, -0.309, 0.063, 0.317, -0.14, -0.0587, -0.199, 0.2877)
 factor.wge(phi = phi) 
 p = plotts.true.wge(phi = phi)
+
+f = fore.arma.wge(x, phi=phi, n.ahead=n.ahead, limits=FALSE, lastn = TRUE)
+
+# ASE
+ase = mean((x[(n-n.ahead+1):n] - f$f)^2)
+ase
+
+results = results %>% add_row(model = "Model 4", ASE = ase)
+
+# Checking whether within limits
+comparison = cbind(f$f, f$ll, f$ul, x[(n-n.ahead+1):n])
+comparison = data.frame(comparison)
+names(comparison) = c("Forecast", "Lower Limit", "Upper Limit", "Actual")
+comparison = comparison %>% 
+  mutate(ll_satisfied = ifelse(Actual >= `Lower Limit`, TRUE, FALSE),
+         ul_satisfied = ifelse(Actual <= `Upper Limit`, TRUE, FALSE),
+         within_limits = ifelse(ll_satisfied & ul_satisfied, TRUE, FALSE))
+
+comparison
+
+```
+
+### Model 5 Factors
+```{r}
+phi = c(0.1516, 0.0769, 0.0016, -0.0095, 0.0542, 0.1117, 0.5683)
+factor.wge(phi = phi) 
+p = plotts.true.wge(phi = phi)
+
+f = fore.arma.wge(x, phi=phi, n.ahead=n.ahead, limits=FALSE, lastn = TRUE)
+
+# ASE
+ase = mean((x[(n-n.ahead+1):n] - f$f)^2)
+ase
+
+results = results %>% add_row(model = "Model 5", ASE = ase)
+
+# Checking whether within limits
+comparison = cbind(f$f, f$ll, f$ul, x[(n-n.ahead+1):n])
+comparison = data.frame(comparison)
+names(comparison) = c("Forecast", "Lower Limit", "Upper Limit", "Actual")
+comparison = comparison %>% 
+  mutate(ll_satisfied = ifelse(Actual >= `Lower Limit`, TRUE, FALSE),
+         ul_satisfied = ifelse(Actual <= `Upper Limit`, TRUE, FALSE),
+         within_limits = ifelse(ll_satisfied & ul_satisfied, TRUE, FALSE))
+
+comparison
+
+```
+
+### Model 6 Factors
+```{r}
+phi = c(.4295, .1769, .0358, .1454)
+
+factor.wge(phi = phi) 
+p = plotts.true.wge(phi = phi)
+
+f = fore.arma.wge(x, phi=phi, n.ahead=n.ahead, limits=FALSE, lastn = TRUE)
+
+# ASE
+ase = mean((x[(n-n.ahead+1):n] - f$f)^2)
+ase
+
+results = results %>% add_row(model = "Model 6", ASE = ase)
+
+# Checking whether within limits
+comparison = cbind(f$f, f$ll, f$ul, x[(n-n.ahead+1):n])
+comparison = data.frame(comparison)
+names(comparison) = c("Forecast", "Lower Limit", "Upper Limit", "Actual")
+comparison = comparison %>% 
+  mutate(ll_satisfied = ifelse(Actual >= `Lower Limit`, TRUE, FALSE),
+         ul_satisfied = ifelse(Actual <= `Upper Limit`, TRUE, FALSE),
+         within_limits = ifelse(ll_satisfied & ul_satisfied, TRUE, FALSE))
+
+comparison
+
+```
+
+### Model 7 Factors
+```{r}
+phi = c(0.1529, 0.0988, 0.0059, -0.0075, 0.0538, 0.1118, 0.5717, 0.0034, -0.0382 )
+factor.wge(phi = phi) 
+p = plotts.true.wge(phi = phi)
+
+f = fore.arma.wge(x, phi=phi, n.ahead=n.ahead, limits=FALSE, lastn = TRUE)
+
+# ASE
+ase = mean((x[(n-n.ahead+1):n] - f$f)^2)
+ase
+
+results = results %>% add_row(model = "Model 7", ASE = ase)
+
+# Checking whether within limits
+comparison = cbind(f$f, f$ll, f$ul, x[(n-n.ahead+1):n])
+comparison = data.frame(comparison)
+names(comparison) = c("Forecast", "Lower Limit", "Upper Limit", "Actual")
+comparison = comparison %>% 
+  mutate(ll_satisfied = ifelse(Actual >= `Lower Limit`, TRUE, FALSE),
+         ul_satisfied = ifelse(Actual <= `Upper Limit`, TRUE, FALSE),
+         within_limits = ifelse(ll_satisfied & ul_satisfied, TRUE, FALSE))
+
+comparison
+
+```
+
+```{r}
+results
 ```
 
 ```{r}
@@ -98,4 +288,11 @@ p = plotts.true.wge(phi = phi)
 phi = c(-0.15, -0.4)
 factor.wge(phi = phi) 
 p = plotts.true.wge(phi = phi)
+```
+
+
+```{r}
+phi = c(-0.9, 0.67, -0.2994)
+factor.wge(phi = phi) 
+# p = plotts.true.wge(phi = phi)
 ```

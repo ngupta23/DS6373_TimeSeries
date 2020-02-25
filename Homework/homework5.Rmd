@@ -151,7 +151,20 @@ factor.wge(phi = theta)
 
 ```
 
+## d
+```{r}
+phi = c(2.95, -3.87, 2.82, -0.92)
+factor.wge(phi = phi)
 
+theta = c(0.9)
+factor.wge(phi = theta)
+
+# Stationary since all roots of the AR component are < 1
+# MA component has abs reciprocal < 1, hence it is invertible
+
+pt = plotts.true.wge(phi = phi, theta = theta)
+
+```
 
 
 ## e
@@ -173,7 +186,7 @@ pt = plotts.true.wge(phi = phi, theta = theta)  # Can not see slower frequency h
 # There are roots at f = 0 and f = 0.5 and both seem to be dominant
 # (abs reciprocal ~ 0.95)
 # There is also a complex root at system frequencies of 0.1074
-# but thsi is not as dominant since abs reciprocal ~ 0.64 only
+# but this is not as dominant since abs reciprocal ~ 0.64 only
 #
 # MA Components
 # There should be a dips at a system frequency of 0.5 (real root) and 0.2623 (complex root). 
@@ -205,13 +218,15 @@ acf1 = true.arma.aut.wge(theta = theta)
 # Non Invertible since abs reciprocal > 1
 
 # The invertible model will have the reciprocal of the current roots
-# You can get this from the abs reciprocal from the original model
+# For Real roots, you can get this from the abs reciprocal from the original model
 # Only need to take this for the non invertible part
 # The invertible part can be taken as is.
 # Root 1 = 2.5 
 # Root 2 = -2
 # (1 - 0.4B)(1 + 0.5B) = 0
-theta = c(-0.1, 0.2)
+factors = mult.wge(0.4, -0.5)
+theta = factors$model.coef
+
 factor.wge(phi = theta)
 acf2 = true.arma.aut.wge(theta = theta)
 
@@ -224,17 +239,34 @@ print(acf2$acf)
 ## b
 
 ```{r}
-theta = c(-2, 1.5)
+theta = c(2, -1.5)
 factor.wge(phi = theta)
 acf1 = true.arma.aut.wge(theta = theta)
-# Non Invertible since abs reciprocal > 1 for one of the roots
 
+# Non Invertible since abs reciprocal > 1 for one of the roots
 # The invertible model will have the reciprocal of the current roots
-# Root 1 = 1.7208  # Use as is sicne this part is invertible
-# Root 2 = -2.5813 # Reciprocal of the original root
-# (1 - 1.7208B)(1 + 0.3874B) = 0
-# 1 - 1.33B - 0.667B2 = 0
-theta = c(1.333, 0.667)
+
+# Original Roots
+root1_org = complex(real = 0.6667, imaginary = 0.4714)
+root2_org = complex(real = 0.6667, imaginary = -0.4714)
+
+# Inverse of the roots
+inv_root1 = 1/root1_org
+inv_root2 = 1/root2_org  
+inv_root1
+inv_root2
+
+# Compute Characteristic Equation
+
+prod = inv_root1 * inv_root2
+prod 
+# Char equation: (z - inv_root1) * (z - inv_root2)
+# = [Z - (1 -0.707i)] * [Z - (1 + 0.717i)]
+# = Z^2 -Z -0.717i*Z -Z +0.717i*Z + prod
+# = Z^2 -2Z + 1.5 
+# = 1 -1.3333Z + 0.6667Z^2
+
+theta = c(1.333, -0.667)
 factor.wge(phi = theta)
 acf2 = true.arma.aut.wge(theta = theta)
 
