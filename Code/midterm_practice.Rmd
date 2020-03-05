@@ -20,6 +20,11 @@ knitr::opts_chunk$set(echo = TRUE)
 
 # Setup
 
+
+```{r}
+rm(list = ls()) # Remove existing variables
+```
+
 ```{r}
 library(tswge)
 library(tswgewrapped)

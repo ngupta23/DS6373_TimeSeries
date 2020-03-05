@@ -1,0 +1,259 @@
+---
+title: "Live Session Assignment 9"
+author: "Nikhil Gupta"
+date: "`r Sys.time()`"
+output:
+  word_document:
+    toc: yes
+    toc_depth: '6'
+  html_document:
+    toc: yes
+    toc_depth: 6
+    toc_float: yes
+always_allow_html: yes
+---
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Setup
+
+```{r}
+library(tswge)
+library(tidyverse)
+library(tswgewrapped)
+```
+
+
+# For pre-live
+
+## Setup
+
+
+```{r}
+x = read.csv("../Datasets/texasgasprice.csv")
+x %>%  glimpse()
+```
+
+```{r}
+x = x$Price
+```
+
+```{r}
+px = plotts.sample.wge(x)
+```
+
+
+```{r}
+aic.wge(x)
+```
+
+
+```{r}
+n.ahead = 24
+n = length(x)
+```
+
+## (1) MLE Estimates
+```{r}
+est.mle = est.arma.wge(x, p = 2, q = 0)
+```
+
+## (2) Burg Estimates
+
+```{r}
+est.burg = est.ar.wge(x, p = 2, type = 'burg')
+```
+
+## (3) ASE Using MLE
+```{r}
+phi = est.mle$phi
+theta = est.mle$theta
+```
+
+```{r include=FALSE}
+f = fore.arma.wge(x, phi=phi, theta = theta,
+                  n.ahead = n.ahead, limits=FALSE, lastn = TRUE, plot = FALSE)
+
+# Without Sliding Window (usual method)
+ase = mean((x[(n-n.ahead+1):n] - f$f)^2)
+ase
+```
+
+```{r}
+r = sliding_ase(x, phi = phi, theta = theta, n.ahead = n.ahead)
+r$ASEs
+```
+
+```{r include=FALSE}
+if (ase != r$ASEs){
+  stop("Sliding Window ASE is not the same as that obtained by regular method. Please check your code")
+}
+
+```
+
+```{r}
+r = sliding_ase(x, phi = phi, theta = theta, n.ahead = n.ahead, batch_size = 104)
+mean(r$ASEs)
+```
+
+## (4) ASE using Burg
+
+```{r}
+phi = est.burg$phi
+theta = 0
+```
+
+
+```{r include=FALSE}
+f = fore.arma.wge(x, phi=phi, theta = theta,
+                  n.ahead = n.ahead, limits=FALSE, lastn = TRUE, plot = FALSE)
+
+# Without Sliding Window (usual method)
+ase = mean((x[(n-n.ahead+1):n] - f$f)^2)
+ase
+```
+
+```{r}
+r = sliding_ase(x, phi = phi, theta = theta, n.ahead = n.ahead)
+r$ASEs
+```
+
+```{r include=FALSE}
+if (ase != r$ASEs){
+  stop("Sliding Window ASE is not the same as that obtained by regular method. Please check your code")
+}
+```
+
+```{r}
+r = sliding_ase(x, phi = phi, theta = theta, n.ahead = n.ahead, batch_size = 104)
+mean(r$ASEs)
+```
+
+## (5) Final Model
+
+* Both models provide roughly the same parameter estimates. 
+* The ASE values for both models is also roughly the same (both single batch and a sliding ASE), although the model with Burg estimates slightly outperforms the model with the MLE estimates. 
+* For this reason, we would choose the model with Burg estimates as the final model.
+
+# Live Session
+
+## Breakout 2
+
+### Part 1
+
+```{r}
+x = read.csv("../Datasets/Unit9_2.csv")
+x %>% glimpse()
+```
+
+```{r}
+x = x$x
+```
+
+```{r}
+px = plotts.sample.wge(x)
+```
+
+```{r}
+p = pacf(x)
+p
+```
+
+* Since PACF drops off drastically at lag = 2, this likely represents an AR(1) model.
+
+
+### Part 2
+
+To find the PACF value, we follow the following procedure.
+
+* For AR(1), we fit an AR(1) model and find the phi1 value. This is the value after accounting all earlier time lags. So phi1 is phi11
+* For AR(2), we fit an AR(2) model and find the phi2 value. This is the phi22 value.
+* and so on and so forth
+
+* Important point, base R pacf function uses Yule-Walker estimates to calculate PACF, so we should use the same to match it.
+
+
+```{r}
+e = est.ar.wge(x, p = 1, type = 'yw')
+e$phi
+```
+
+```{r}
+e = est.ar.wge(x, p = 2, type = 'yw')
+e$phi
+```
+
+```{r}
+e = est.ar.wge(x, p = 3, type = 'yw')
+e$phi
+```
+
+
+```{r}
+e = est.ar.wge(x, p = 4, type = 'yw')
+e$phi
+```
+
+
+```{r}
+e = est.ar.wge(x, p = 5, type = 'yw')
+e$phi
+```
+
+## Breakout 3
+
+* The psi weights for phi = 0.9 is much larger than the psi weights for psi = 0.5.
+* Hence the condifence interval will be wider for phi = 0.9 than for phi = 0.5
+
+
+## Breakout 4
+
+```{r}
+x = read.csv("../Datasets/Unit9_1.csv")
+x %>% glimpse()
+```
+
+```{r}
+x = x$x
+```
+
+
+```{r}
+px = plotts.sample.wge(x)
+```
+
+```{r}
+pz = parzen.wge(x, dbcalc = FALSE)
+```
+
+```{r}
+p = pacf(x)
+p
+```
+
+* Looks like white noise
+
+```{r}
+aic5.wge(x, type = 'aic')
+```
+
+
+* Even though aic5 does not suggest white noise, we are confident that it is and hence this does not need to be modeled.
+
+```{r}
+aic5.wge(x, type = 'aicc')
+```
+
+* AICC also does not predict white noise.
+
+```{r}
+aic5.wge(x, type = 'bic')
+```
+
+* BIC predicts white noise
+
+* **One way to check for white noise (if it does not show up in AIC) is to check with BIC. Since BIC penalizes higher ordered parameters, if BIC shows white noise, we have more certainty that it is white noise. If even BIC does not show white noise, then it may be suspect (whether it is white noise). Just some knobs to consider for finding white noise.**
+

@@ -2,6 +2,7 @@
 
 check_stationarity = function(data, title = "Time Series Plot", xlab = "Time", ylab = "Time Series Realization" ){
   plot(data, type = "l", main = title, xlab = xlab, ylab = ylab)
+  plotts.wge(x)
   len = length(data)
   len_by_2 = round(len/2)
   seg_2_start = len_by_2+1
@@ -10,7 +11,6 @@ check_stationarity = function(data, title = "Time Series Plot", xlab = "Time", y
   acf(data[seg_2_start:len], main = "Second Half ACF")
 }
 
-## Add to tswgewrapped
 calculate_ts_gamma = function(x, k = 0){
   lhs = lag(x, k) - mean(x)
   rhs = x - mean(x)
@@ -18,7 +18,6 @@ calculate_ts_gamma = function(x, k = 0){
   return(gamma_k)
 }
 
-## Add to tswgewrapped
 calculate_ts_rho = function(x, k = 0){
   gamma_k = calculate_ts_gamma(x, k)
   gamma_0 = calculate_ts_gamma(x, 0)
@@ -154,8 +153,12 @@ return_all_a_calc = function(x, phi, theta, index){
   return(list(all_a = all_a, vara = vara, stda = stda))
 }
 
-## Add to tswge
-sliding_ase = function(x, phi = 0, theta = 0, d = 0, s = 0, n.ahead = NA, batch_size = NA){
+sliding_ase = function(x,
+                       phi = 0, theta = 0, d = 0, s = 0,    # ARUMA arguments
+                       linear = NA, freq = NA,              # Signal + Noise arguments
+                       n.ahead = NA, batch_size = NA,       # Forecasting specific arguments
+                       ...)                                 # max.p for signal + noise, lambda for ARUMA      
+  {
   # Sliding CV ... batches are mutually exclusive
   
   n = length(x)
@@ -168,6 +171,20 @@ sliding_ase = function(x, phi = 0, theta = 0, d = 0, s = 0, n.ahead = NA, batch_
   
   if (is.na(n.ahead)){
     stop("Number of points to be used for forecasting has not been specified. Please specify n.ahead")
+  }
+  
+  if (all(phi == 0) & all(theta == 0) & d == 0 & s == 0){
+    if (is.na(linear) & is.na(freq)){
+      stop("You have specified the arguments for neither an ARMA/ARUMA model or a Signal + Noise Model. Please specify at least one of these to continue")
+    }
+  }
+  
+  aruma = FALSE
+  if (!(all(phi == 0) & all(theta == 0) & d == 0 & s == 0)){
+    aruma = TRUE
+  }
+  else{
+    # Signal + Noise model
   }
   
   start = 1
@@ -184,8 +201,15 @@ sliding_ase = function(x, phi = 0, theta = 0, d = 0, s = 0, n.ahead = NA, batch_
     # print(paste("i: ", i, "Start: ", start, " Stop: ", batch_size+i))
     # print(paste(" Test Start: ", (batch_size+i-n.ahead+1),  "Test End: ", (batch_size+i)))
     
-    forecasts = fore.aruma.wge(x = subset, phi = phi, theta = theta, d = d, s = s,
-                               n.ahead = n.ahead, lastn = TRUE, plot = FALSE)
+    if (aruma){
+      forecasts = fore.aruma.wge(x = subset, phi = phi, theta = theta, d = d, s = s,
+                                 n.ahead = n.ahead, lastn = TRUE, plot = FALSE, ...)
+    }
+    else{
+      forecasts = fore.sigplusnoise.wge(x = subset, linear = linear, freq = freq,
+                                        n.ahead = n.ahead, lastn = TRUE, plot = FALSE, ...)
+    }
+    
     ASEs[i+1] = mean((test_data - forecasts$f)^2)
     start = start+1
   }

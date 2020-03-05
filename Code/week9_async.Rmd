@@ -1,0 +1,375 @@
+---
+title: "Time Series - Async Week 9"
+author: "Nikhil Gupta"
+date: "`r Sys.time()`"
+output:
+  word_document:
+    toc: yes
+    toc_depth: '6'
+  html_document:
+    toc: yes
+    toc_depth: 6
+    toc_float: yes
+always_allow_html: yes
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(tswge)
+library(tidyverse)
+```
+
+
+# Model Estimation 
+
+## MLE
+```{r}
+phi = c(1.6, -0.8)
+theta = 0.8
+
+x21 = gen.arma.wge(n = 100, phi = phi, theta = theta, vara = 5, sn = 55)
+x21 = x21+50
+e = est.arma.wge(x21, p = 2, q = 1)
+e
+e$avar
+mean(x21)
+
+
+# WNV using actual parameters
+f = fore.arma.wge(x21, phi = phi, theta = theta, n.ahead = 12)
+f$wnv  # Different value from that in est.arma.wge
+
+# WNV using estimated parameters
+f = fore.arma.wge(x21, phi = e$phi, theta = e$theta, n.ahead = 12)
+f$wnv  # Different value from that in est.arma.wge
+```
+
+```{r}
+phi = c(0, -0.7, 0.1, -0.72)
+theta = 0
+
+x40 = gen.arma.wge(n = 100, phi = phi, theta = theta, vara = 10, sn = 72)
+x40 = x40+20
+e = est.ar.wge(x40, p = 4, type = 'mle')
+e
+e$avar
+mean(x40)
+
+# WNV using actual parameters
+f = fore.arma.wge(x40, phi = phi, theta = theta, n.ahead = 12)
+f$wnv  # Different value from that in est.arma.wge
+
+# WNV using estimated parameters
+f = fore.arma.wge(x40, phi = e$phi, theta = 0, n.ahead = 12)
+f$wnv  # Different value from that in est.arma.wge
+```
+
+## 9.3
+
+```{r}
+phi = c(0.3, -0.7)
+theta = -0.4
+mean = 37
+
+x = gen.arma.wge(n = 200, phi = phi, theta = theta, vara = 4, sn = 27)
+x = x + mean
+e = est.arma.wge(x, p = 2, q = 1)
+e
+mean(x)
+```
+
+
+## YW, BURG and MLE
+```{r}
+x=gen.arma.wge(n=200,phi=c(1.6,-.9), vara=2, sn=33)
+```
+
+```{r}
+## Yule Walker Estimates
+x.yw = est.ar.wge(x,p=2,type='yw')
+x.yw
+```
+
+```{r}
+## Burg Estimates
+x.burg = est.ar.wge(x,p=2,type='burg')
+x.burg
+```
+
+```{r}
+## MLE Estimates
+x.mle = est.ar.wge(x,p=2,type='mle')
+x.mle
+```
+
+```{r}
+px = plotts.sample.wge(x)
+```
+
+## 9.5
+
+```{r}
+phi = c(0.3, -0.7)
+mean = 37
+
+x = gen.arma.wge(n = 200, phi = phi, vara = 4, sn = 27)
+x = x + mean
+e = est.ar.wge(x, p = 2, type = 'burg')
+e
+mean(x)
+
+```
+
+
+## Vara estimation
+```{r}
+x=gen.arma.wge(n=100,phi=c(2.195,-1.994,.796), sn=53)
+x.mle=est.ar.wge(x,p=3,type='mle')
+x.mle
+
+## This is how avar is calculated using the residuals
+mean(x.mle$res^2)
+x.mle$avar
+```
+
+## 9.8 (3)
+```{r}
+x = read.csv("../Datasets/maybewhitenoise1.csv")
+x %>% glimpse()
+```
+
+```{r}
+x = x$x
+px = plotts.sample.wge(x)
+```
+
+## 9.8 (4)
+```{r}
+x = read.csv("../Datasets/maybewhitenoise2.csv")
+x %>% glimpse()
+```
+
+```{r}
+x = x$x
+px = plotts.sample.wge(x)
+```
+
+# Model Identification
+
+## AIC
+
+### AR(3)
+
+```{r}
+# fig3.16a is a realization from the AR(3) model
+# (1 - 2.55B +2.42B^2 -0.855 B^3)Xt = at | sigma_a^2 = 1
+# (1-0.95B)(1-1.6B +0.9B^2)Xt = at (Factored form)
+data(fig3.16a)
+# plotts.sample.wge provides a “look” at the
+# data (which we recommend you always do)
+px = plotts.sample.wge(fig3.16a)
+```
+
+
+```{r}
+aic.wge(fig3.16a,p=0:5,q=0:2, type='aic')
+mean(fig3.16a)
+```
+
+```{r}
+# Get the factor table
+est.arma.wge(x, p = 3, q = 0)
+
+```
+
+### ARMA(2,1)
+
+```{r}
+phi = c(1.6,-.9)
+theta = 0.8
+mean = 10
+x = gen.arma.wge(n=100, phi= phi,theta = theta, sn=67)
+x = x + mean
+px = plotts.sample.wge(x)
+
+```
+
+```{r}
+# no type listed below so it will use aic
+aic.wge(x,p = 0:8, q = 0:4)
+# picks ARMA(2,1)
+
+```
+
+```{r}
+est.arma.wge(x, p=2, q=1)  # Gives the same estimates as aic.wge, but est.arma.wge gives us the factor table.
+mean(x)
+```
+
+### ARMA(3,1) 
+
+**Example where AIC does not work so we need AIC5**
+
+```{r}
+phi = c(2.3, -1.92, 0.56)
+theta = -0.8
+mean = 30
+
+x = gen.arma.wge(n=75, phi=,phi, theta = theta, sn=61)
+x = x + mean
+px = plotts.sample.wge(x)
+```
+
+```{r}
+aic5.wge(x, p=0:8, q=0:2)
+# picks (6,1) try BIC
+```
+
+```{r}
+est.arma.wge(x, p = 6, q = 1)
+# Factors are weak (0.8515. 0.677)
+```
+
+```{r}
+aic5.wge(x, p=0:8, q=0:2, type="bic")
+# BIC picks (3,1) – decide to use it
+```
+
+```{r}
+# showing est.arma.wge results for ARMA(3,1)
+est.arma.wge(x, p=3, q=1)
+mean(x)
+# mean is 25.74
+
+# Simpler Model Frequency may match the realization Parzen Window
+# Even though one of the factors is weak (0.5)
+
+```
+
+## 9.10
+```{r}
+x = read.csv("../Datasets/inflation.csv")
+x %>% glimpse()
+```
+
+```{r}
+x = x$Inflation
+```
+
+```{r}
+aic5.wge(x)
+```
+
+```{r}
+aic5.wge(x, type = 'bic')
+```
+
+
+## 9.12 
+### 2
+```{r}
+x = read.csv("../Datasets/armawhatpq1.csv")
+x %>%  glimpse()
+```
+```{r}
+x = x$x
+```
+
+```{r}
+acf(x)
+pacf(x)
+```
+
+### 3
+```{r}
+aic.wge(x, type = 'aic')
+```
+
+```{r}
+aic.wge(x, type = 'bic')
+```
+
+### 4
+```{r}
+x = read.csv("../Datasets/inflation.csv")
+x %>% glimpse()
+```
+
+```{r}
+x = x$Inflation
+```
+
+```{r}
+pacf(x)
+```
+
+
+# Putting it together
+```{r}
+x = read.csv("../Datasets/putittogether.csv")
+x %>% glimpse()
+```
+
+```{r}
+x = x$x
+```
+
+```{r}
+px = plotts.sample.wge(x)
+```
+
+```{r}
+aic5.wge(x)
+```
+
+```{r}
+e = est.arma.wge(x, p = 2, q = 2)
+```
+
+```{r}
+phi = e$phi
+theta = e$theta
+
+f = fore.arma.wge(x, phi = phi, theta = theta, n.ahead = 20)
+```
+
+## 9.13
+
+### 4
+
+```{r}
+x = read.csv("../Datasets/texasgasprice.csv")
+x %>%  glimpse()
+```
+
+```{r}
+x = x$Price
+```
+
+```{r}
+px = plotts.sample.wge(x)
+```
+
+### 5
+```{r}
+aic.wge(x)
+```
+
+### 6
+```{r}
+est = est.arma.wge(x, p = 2, q = 0)
+```
+
+```{r}
+phi = est$phi
+theta = est$theta
+
+f = fore.arma.wge(x, phi = phi, theta = theta, n.ahead = 8)
+```
+
+```{r}
+f$f
+```

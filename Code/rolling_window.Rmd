@@ -3,13 +3,13 @@ title: "Rolling Window"
 author: "Nikhil Gupta"
 date: "`r Sys.time()`"
 output:
+  word_document:
+    toc: yes
+    toc_depth: '6'
   html_document:
     toc: yes
     toc_depth: 6
     toc_float: yes
-  word_document:
-    toc: yes
-    toc_depth: '6'
 always_allow_html: yes
 ---
 
@@ -20,6 +20,11 @@ knitr::opts_chunk$set(echo = TRUE)
 
 # Setup
 
+
+```{r}
+rm(list = ls()) # Remove existing variables
+```
+
 ```{r}
 library(tswge)
 # library(tswgewrapped)
@@ -27,45 +32,45 @@ library(dplyr)
 library(tidyverse)
 library(DT)
 library(ggplot2)
-# source("common_functions.R")
+source("common_functions.R")
 ```
 
 ```{r}
-sliding_ase = function(x, phi = 0, theta = 0, d = 0, s = 0, n.ahead = NA, batch_size = NA){
-  # Sliding CV ... batches are mutually exclusive
-  
-  n = length(x)
-  
-  if (is.na(batch_size)){
-    warning("Batch Size has not been specified. Will assume a single batch")
-    cat("\n")
-    batch_size = n
-  }
-  
-  if (is.na(n.ahead)){
-    stop("Number of points to be used for forecasting has not been specified. Please specify n.ahead")
-  }
-  
-  start = 1
-  num_batches = n-batch_size+1
-  ASEs = numeric(num_batches)
-  
-  for (i in 0:(num_batches-1))
-  {
-    subset = x[start:(batch_size+i)]
-    test_data = x[(batch_size+i-n.ahead+1):(batch_size+i)]
-    
-    # print(paste("i: ", i, "Start: ", start, " Stop: ", batch_size+i))
-    # print(paste(" Test Start: ", (batch_size+i-n.ahead+1),  "Test End: ", (batch_size+i)))
-    
-    forecasts = fore.aruma.wge(x = subset, phi = phi, theta = theta, d = d, s = s,
-                               n.ahead = n.ahead, lastn = TRUE, plot = FALSE)
-    ASEs[i+1] = mean((test_data - forecasts$f)^2)
-    start = start+1
-  }
-  
-  return(ASEs)
-}
+# sliding_ase = function(x, phi = 0, theta = 0, d = 0, s = 0, n.ahead = NA, batch_size = NA){
+#   # Sliding CV ... batches are mutually exclusive
+#   
+#   n = length(x)
+#   
+#   if (is.na(batch_size)){
+#     warning("Batch Size has not been specified. Will assume a single batch")
+#     cat("\n")
+#     batch_size = n
+#   }
+#   
+#   if (is.na(n.ahead)){
+#     stop("Number of points to be used for forecasting has not been specified. Please specify n.ahead")
+#   }
+#   
+#   start = 1
+#   num_batches = n-batch_size+1
+#   ASEs = numeric(num_batches)
+#   
+#   for (i in 0:(num_batches-1))
+#   {
+#     subset = x[start:(batch_size+i)]
+#     test_data = x[(batch_size+i-n.ahead+1):(batch_size+i)]
+#     
+#     # print(paste("i: ", i, "Start: ", start, " Stop: ", batch_size+i))
+#     # print(paste(" Test Start: ", (batch_size+i-n.ahead+1),  "Test End: ", (batch_size+i)))
+#     
+#     forecasts = fore.aruma.wge(x = subset, phi = phi, theta = theta, d = d, s = s,
+#                                n.ahead = n.ahead, lastn = TRUE, plot = FALSE)
+#     ASEs[i+1] = mean((test_data - forecasts$f)^2)
+#     start = start+1
+#   }
+#   
+#   return(ASEs)
+# }
 
 ```
 
@@ -92,9 +97,44 @@ theta = 0
 d = 0
 s = 0
 
+# Compare data to a realization from the model
+xr = gen.aruma.wge(n = 2000, phi = phi, theta = theta, d = d, s = s, sn = 101)
+px = plotts.sample.wge(xr)   
+
 # Without Sliding Window (usual method)
+
+# # Can use fore.aruma with d = 0 and s = 0 instead of using fore.arma. This yields the same results.
+# f = fore.arma.wge(x, phi=phi, theta = theta,
+#                    n.ahead = n.ahead, limits=FALSE, lastn = TRUE, plot = FALSE)
+# ase = mean((x[(n-n.ahead+1):n] - f$f)^2)
+# ase
+# 
+# comparison = cbind(f$f, f$ll, f$ul, x[(n-n.ahead+1):n])
+# comparison = data.frame(comparison)
+# names(comparison) = c("Forecast", "Lower Limit", "Upper Limit", "Actual")
+# comparison = comparison %>% 
+#   mutate(half_width = (`Upper Limit` - `Lower Limit`)/2,
+#          perc_error = round((Forecast - Actual) / Actual * 100, 2),
+#          ll_satisfied = ifelse(Actual >= `Lower Limit`, TRUE, FALSE),
+#          ul_satisfied = ifelse(Actual <= `Upper Limit`, TRUE, FALSE),
+#          within_limits = ifelse(ll_satisfied & ul_satisfied, TRUE, FALSE))
+# comparison
+
+
 f = fore.aruma.wge(x, phi=phi, theta = theta,  d = d, s = s,
                    n.ahead = n.ahead, limits=FALSE, lastn = TRUE, plot = FALSE)
+
+# comparison = cbind(f$f, f$ll, f$ul, x[(n-n.ahead+1):n])
+# comparison = data.frame(comparison)
+# names(comparison) = c("Forecast", "Lower Limit", "Upper Limit", "Actual")
+# comparison = comparison %>% 
+#   mutate(half_width = (`Upper Limit` - `Lower Limit`)/2,
+#          perc_error = round((Forecast - Actual) / Actual * 100, 2),
+#          ll_satisfied = ifelse(Actual >= `Lower Limit`, TRUE, FALSE),
+#          ul_satisfied = ifelse(Actual <= `Upper Limit`, TRUE, FALSE),
+#          within_limits = ifelse(ll_satisfied & ul_satisfied, TRUE, FALSE))
+# comparison
+
 ase = mean((x[(n-n.ahead+1):n] - f$f)^2)
 ase
 
@@ -172,6 +212,39 @@ ASEs = sliding_ase(x, phi = phi, theta = theta, d = d, s = s, n.ahead = n.ahead,
 results = results %>% add_row(model = "Model 3", ASEs = ASEs, ASE_mean = mean(ASEs), ASE_sd = sd(ASEs))
 
 ```
+
+## Model 4
+```{r}
+f = fore.sigplusnoise.wge(x = x, linear = TRUE, n.ahead = n.ahead, lastn = FALSE, limits = TRUE)
+
+xr = gen.sigplusnoise.wge(n = 2000, b0 = f$b0[['(Intercept)']], b1 = f$b0[['tl']], phi = f$phi.z, sn = 101)
+px = plotts.sample.wge(xr)
+
+# ASE Calculation: Without Sliding Window (usual method)
+f = fore.sigplusnoise.wge(x = x, linear = TRUE, n.ahead = n.ahead, lastn = TRUE, limits = FALSE)
+
+# Without Sliding Window (usual method)
+ase = mean((x[(n-n.ahead+1):n] - f$f)^2)
+ase
+
+# Default with sliding window function
+# Assumes only 1 batch, so results must match the one without sliding window (usual method) above
+ASEs = sliding_ase(x, linear = TRUE, n.ahead = n.ahead)  
+ASEs
+
+# With Sliding Window of batch_size 50
+batch_size = 50
+ASEs = sliding_ase(x, linear = TRUE, d = d, s = s, n.ahead = n.ahead, batch_size = batch_size)
+# ASEs
+# mean(ASEs)
+# sd(ASEs)
+
+results = results %>% add_row(model = "Model 4", ASEs = ASEs, ASE_mean = mean(ASEs), ASE_sd = sd(ASEs))
+
+
+
+```
+
 
 ## Comparison
 
