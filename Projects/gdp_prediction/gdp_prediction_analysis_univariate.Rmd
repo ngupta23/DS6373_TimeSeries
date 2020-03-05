@@ -93,15 +93,37 @@ aic5.wge(x)
 est.s.mle = est.arma.wge(x, p = 2, q = 1)
 ```
 
+```{r}
+est.s.mle$theta
+```
+
+
+
 **OBSERVATIONS**
 
 * This clears a lot of confusion. **Even when fitting a stationary ARMA model, we get an estimate of phi = 0.9917 which is very close to 1 (non stationary)**. Hence the confusion that we had before can be cleared now. The data most definitely is coming from a non stationary process. For the sake of completeness, we will continue modeling with this stationary model and see how well it performs.
+
+
+### Factored Form
+
+```{r}
+est.s.mle$avar
+```
+
+**(1 - 0.9917B)(1 - 0.2257B)$X_{t}$ = (1 - 0.9128)$a_{t}$  with $\sigma_{a}^2$ = `r est.s.mle$avar`**
+
 
 ### Forecasting 
 
 ```{r}
 phi = est.s.mle$phi
 theta = est.s.mle$theta
+```
+
+```{r}
+# Plot the forecasts
+f = fore.arma.wge(x, phi=phi, theta = theta,
+                  n.ahead = n.ahead, limits=TRUE, lastn = FALSE, plot = TRUE)
 ```
 
 ```{r include=FALSE}
@@ -114,6 +136,7 @@ ase
 ```
 
 ```{r}
+# Calculate the ASE (single batch)
 r = sliding_ase(x, phi = phi, theta = theta, n.ahead = n.ahead)
 
 ASEs = r$ASEs
@@ -132,6 +155,7 @@ if (ase != r$ASEs){
 ```
 
 ```{r}
+# Calculate the ASE (rolling window)
 r = sliding_ase(x, phi = phi, theta = theta, n.ahead = n.ahead, batch_size = batch_size)
 
 ASEs = r$ASEs
@@ -205,6 +229,16 @@ est.ns.mle = est.arma.wge(dif1, p = 0, q = 1)
 est.ns.mle$theta
 ```
 
+
+### Factored Form
+
+```{r}
+est.ns.mle$avar
+```
+
+**(1 - B)$X_{t}$ = (1 - 0.8881)$a_{t}$  with $\sigma_{a}^2$ = `r est.ns.mle$avar`**
+
+
 ### Forecasting
 
 
@@ -213,6 +247,12 @@ phi = est.ns.mle$phi
 theta = est.ns.mle$theta
 d = 1
 s = 0
+```
+
+```{r}
+# Plot the forecasts
+f = fore.aruma.wge(x, phi=phi, theta = theta, d = d, s = s,
+                  n.ahead = n.ahead, limits=TRUE, lastn = FALSE, plot = TRUE)
 ```
 
 ```{r include=FALSE}
@@ -225,6 +265,7 @@ ase
 ```
 
 ```{r}
+# Calculate the ASE (single batch)
 r = sliding_ase(x, phi = phi, theta = theta, d = d, s = s, n.ahead = n.ahead)
 
 ASEs = r$ASEs
@@ -243,6 +284,7 @@ if (ase != r$ASEs){
 ```
 
 ```{r}
+# Calculate the ASE (sliding window)
 r = sliding_ase(x, phi = phi, theta = theta, d = d, s = s, n.ahead = n.ahead, batch_size = batch_size)
 
 ASEs = r$ASEs
@@ -251,8 +293,6 @@ Time = r$time
 print(paste("ASE for the model (Rolling Window): ", mean(ASEs)))
 
 results = results %>% add_row(model = "ARIMA_0_1_1_0_MLE_bs50", ASE = ASEs, Time = Time) 
-
-
 ```
 
 
