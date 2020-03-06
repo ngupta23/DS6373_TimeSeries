@@ -3,13 +3,16 @@ title: "GDP Prediction"
 author: "Nikhil Gupta"
 date: "`r Sys.time()`"
 output:
+  github_document: 
+    toc: yes
+    toc_depth: 6
+  word_document:
+    toc: yes
+    toc_depth: '6'
   html_document:
     toc: yes
     toc_depth: 6
     toc_float: yes
-  word_document:
-    toc: yes
-    toc_depth: '6'
 always_allow_html: yes
 ---
 
