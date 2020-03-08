@@ -1,0 +1,53 @@
+---
+title: "Model Compare Univariate"
+author: "Nikhil Gupta"
+date: "`r Sys.time()`"
+output:
+  github_document:
+    toc: yes
+    toc_depth: '6'
+  word_document:
+    toc: yes
+    toc_depth: '6'
+  html_document:
+    toc: yes
+    toc_depth: 6
+    toc_float: yes
+always_allow_html: yes
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(tswge)
+library(tswgewrapped)
+library(tidyverse)
+```
+
+
+```{r}
+source("ModelCompareUnivariate.R")
+```
+
+```{r}
+data("airlog")
+
+models = list("ARMA Model 1A" = list(phi = c(0.5, 1), theta = c(0.5), sliding_ase = FALSE),
+              "ARMA Model 1B" = list(phi = c(0.5, 1), theta = c(0.5), sliding_ase = TRUE),
+              "ARMIA Model 2" = list(phi = c(0.5, 1), p = 2, d = 1, sliding_ase = TRUE),
+              "ARMUA Model 3" = list(phi = c(0.5, 1), d = 1, s = 12, sliding_ase = TRUE))
+```
+
+
+```{r}
+mdl_compare = ModelCompareUnivariate$new(x = airlog, mdl_list = models, n.ahead = 36, batch_size = 108)
+mdl_compare$plot_histogram_ases()
+```
+
+
+```{r}
+
+```
+
