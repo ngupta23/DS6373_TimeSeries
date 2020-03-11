@@ -1,0 +1,198 @@
+---
+title: "Live Session Assignment 10"
+author: "Nikhil Gupta"
+date: "`r Sys.time()`"
+output:
+  word_document:
+    toc: yes
+    toc_depth: '6'
+  html_document:
+    toc: yes
+    toc_depth: 6
+    toc_float: yes
+always_allow_html: yes
+---
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Setup
+
+```{r}
+library(tswge)
+library(tidyverse)
+library(tswgewrapped)
+library(orcutt)
+```
+
+
+# For pre-live
+
+## Setup
+
+```{r}
+electrictiy = read.csv("../Datasets/electricity_usage_nikhil_house.csv")
+head(electrictiy)
+```
+
+```{r}
+sum(is.na(electrictiy$Usage))
+```
+
+
+* There are some missing values. We will need to impute these
+
+```{r}
+data = ts(electrictiy$Usage, frequency = 12, start = c(2009, 12))
+
+library(imputeTS)
+x = imputeTS::na_interpolation(data, option = 'spline')
+x
+```
+
+
+```{r}
+px = plotts.sample.wge(x)
+```
+
+# ARIMA Model
+
+## Overfit table
+
+* We see mild wandering behavior, but more than that data shows seasonality with s = 12. To verify this, we will use overfit table with s = 15
+
+```{r}
+factor.wge.season(12)
+```
+
+```{r}
+e.burg = est.ar.wge(x, p = 15, type = 'burg')
+```
+
+* Just considering ARIMA, we dont see a very strong 1-B factor. It is present with a Abs Reciprocal of 0.91, so we could still consider removing it.
+
+```{r}
+x.d1 = artrans.wge(x, phi.tr = 1)
+px = plotts.sample.wge(x.d1)
+```
+
+* THis shows a more sinusoidal behavior. It also lookks sort of stationary. We will try to model it using aic5
+
+## ARMA Estimation
+```{r}
+## Increased limit since lot of p = 4 and 5 were showing up in top 5. 
+## Also used BIC for a smaller model
+aic5.wge(x.d1, p = 0:8, q = 0:3, type = 'bic') 
+```
+
+```{r}
+e = est.arma.wge(x.d1, p = 8, q = 1)
+factor.wge(e$theta)
+e$avar
+```
+
+* Although there are a couple of weak factors, the 2 main ones match the frequency peaks that show up in the Spectral Density of the differenced data. Also, the theta value points to a dip at f = 0 which again matches with what we have in the Spectral Density.
+* Hence we will stick to this model.
+
+* (1-B)(1 -0.4833B +0.1660B2 +0.2849B3 +0.2112B4 +0.0093B5 +0.1058B6 +0.1334B7 +0.3555B8) Xt = (1-0.8984B)at
+* (1-B)(1-1.6869B+0.9362B^2)(1-0.8750B+0.8908B^2)(1+1.4843B+0.6649B^2)(1+0.5943B+0.6411B^2) Xt = (1-0.8984B)at
+
+## Prediction
+```{r}
+f = fore.aruma.wge(x, phi = e$phi, theta = e$theta, d = 1, s = 0, n.ahead = 12, limits = FALSE)
+f = fore.aruma.wge(x, phi = e$phi, theta = e$theta, d = 1, s = 0, n.ahead = 12, limits = FALSE, lastn = TRUE)
+```
+
+```{r}
+r = sliding_ase(x, phi = e$phi, theta = e$theta, d = 1, s = 0, n.ahead = 12, batch_size = 60)
+mean(r$ASEs)
+sd(r$ASEs)
+```
+
+
+
+# Seasonal ARIMA Model
+
+## Overfit Tables
+
+* We see mild wandering behavior, but more than that data shows seasonality with s = 12. To verify this, we will use overfit table with s = 15
+
+```{r}
+factor.wge.season(12)
+```
+
+
+```{r}
+e.burg = est.ar.wge(x, p = 15, type = 'burg')
+```
+
+
+```{r}
+e.burg = est.ar.wge(x, p = 24, type = 'burg')
+```
+
+* I only see a few of the factors show up from s = 12. 
+* The only factors that are appreciable are 1-1.7321B+1.0000B^2 and 1-1.0000B+1.0000B^2
+* Hence only these should be used to transform the data
+
+```{r}
+factors = mult.wge(fac1 = c(1.732, -1), fac2 = c(1, -1))
+factors$model.coef
+
+factor.wge(factors$model.coef)
+
+```
+
+```{r}
+x.tr = artrans.wge(x, phi.tr = factors$model.coef)
+px = plotts.sample.wge(x.tr)
+```
+
+* This looks very much stationary. Lets model this using AIC5
+
+```{r}
+aic5.wge(x.tr, p = 0:10, q = 0:3, type = 'bic')
+```
+
+## ARMA Estimation
+```{r}
+e = est.arma.wge(x.tr, p = 6, q = 2)
+factor.wge(e$theta)
+e$avar
+```
+
+## Prediction
+```{r}
+f = fore.aruma.wge(x, phi = e$phi, theta = e$theta, d = 0, s = 0, lambda = factors$model.coef, n.ahead = 12, limits = FALSE)
+f = fore.aruma.wge(x, phi = e$phi, theta = e$theta, d = 0, s = 0, lambda = factors$model.coef, n.ahead = 12, limits = FALSE, lastn = TRUE)
+```
+
+```{r}
+r = sliding_ase(x, phi = e$phi, theta = e$theta, d = 0, s = 0, n.ahead = 12, batch_size = 60, lambda = factors$model.coef)
+mean(r$ASEs)
+sd(r$ASEs)
+```
+
+# Signal Plus Noise Model
+
+```{r}
+t = seq(1,length(x),1)
+df = data.frame(x = x, t= t)
+fit = lm(x~t, data = df)
+summary(fit)
+```
+
+* Does not show a linear trend.
+
+```{r}
+cfit = cochrane.orcutt(fit) 
+summary(cfit)
+```
+
+* Does not show a lineear trend in the data. Since the trend is not fouund, we will not continue the fitting process using this method.
+```{r}
+
+```
+
