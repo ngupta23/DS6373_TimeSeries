@@ -20,29 +20,47 @@ always_allow_html: yes
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-```{r}
+```{r message=FALSE, warning=FALSE}
 library(tswge)
 library(tswgewrapped)
 library(tidyverse)
 ```
 
 
-```{r}
+```{r message=FALSE, warning=FALSE}
 source("ModelCompareUnivariate.R")
 ```
 
 ```{r}
 data("airlog")
 
-models = list("ARMA Model 1A" = list(phi = c(0.5, 1), theta = c(0.5), sliding_ase = FALSE),
-              "ARMA Model 1B" = list(phi = c(0.5, 1), theta = c(0.5), sliding_ase = TRUE),
-              "ARMIA Model 2" = list(phi = c(0.5, 1), p = 2, d = 1, sliding_ase = TRUE),
-              "ARMUA Model 3" = list(phi = c(0.5, 1), d = 1, s = 12, sliding_ase = TRUE))
+# Woodward Gray Airline Model
+phi_wg = c(-0.36, -0.05, -0.14, -0.11, 0.04, 0.09, -0.02, 0.02, 0.17, 0.03, -0.10, -0.38)
+d_wg = 1
+s_wg = 12
+
+# Parzen Model
+phi_pz = c(0.7400, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.3800, -0.2812)
+s_pz = 12
+
+# Box Model
+d_bx = 1
+s_bx = 12  
+theta_bx =  c(0.40, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0.60, -0.24)
+
+
+models = list("Woodward Gray Model A" = list(phi = phi_wg, d = d_wg, s = s_wg, sliding_ase = FALSE),
+              "Woodward Gray Model B" = list(phi = phi_wg, d = d_wg, s = s_wg, sliding_ase = TRUE),
+              "Parzen Model A" = list(phi = phi_pz, s = s_pz, sliding_ase = FALSE),
+              "Parzen Model B" = list(phi = phi_pz, s = s_pz, sliding_ase = TRUE),
+              "Box Model A" = list(theta = theta_bx, d = d_bx, s = s_bx, sliding_ase = FALSE),
+              "Box Model B" = list(theta = theta_bx, d = d_bx, s = s_bx, sliding_ase = TRUE)
+              )
 ```
 
 
 ```{r}
-mdl_compare = ModelCompareUnivariate$new(x = airlog, mdl_list = models, n.ahead = 12, batch_size = 60)
+mdl_compare = ModelCompareUnivariate$new(x = airlog, mdl_list = models, n.ahead = 36, batch_size = 72)
 ```
 
 ```{r, warning=FALSE}
@@ -59,29 +77,26 @@ mdl_compare$statistical_compare()
 ```
 
 ```{r}
-mdl_compare$get_tabular_metrics(ases = TRUE)
+ASEs = mdl_compare$get_tabular_metrics(ases = TRUE)
+DT::datatable(ASEs)
+```
+
+```{r echo=FALSE}
+ASE_wg_single_batch = round(ASEs %>% filter(Model == "Woodward Gray Model A") %>% select(ASE) %>%  pluck(1), 9)
+ASE_pz_single_batch = round(ASEs %>% filter(Model == "Parzen Model A") %>% select(ASE) %>%  pluck(1), 9)
+ASE_bx_single_batch = round(ASEs %>% filter(Model == "Box Model A") %>% select(ASE) %>%  pluck(1), 9)
+
+if ((ASE_wg_single_batch != 0.004185726) | (ASE_pz_single_batch != 0.012526356) | (ASE_bx_single_batch != 0.006903242)){
+  stop("Your calculations dont match those that came from a simple use of tswge. Please check what is wrong")
+}
+
 ```
 
 ```{r}
-data = mdl_compare$get_tabular_metrics(ases = FALSE)
-data
+forecasts = mdl_compare$get_tabular_metrics(ases = FALSE)
+DT::datatable(forecasts)
 ```
 
-```{r eval=FALSE, fig.height=8, fig.width=10, include=FALSE}
-# Just Testing
-data_no_realization = data %>% filter(Model != "Realization")
-data_only_realization = data %>% filter(Model == "Realization")
-
-p = ggplot() +# data_only_realization, mapping = aes(x=Time, y=ul, color = Model)) + geom_line() +
-  #geom_line(data_only_realization, mapping = aes(x=Time, y=ul, color = Model)) +
-  #facet_wrap( ~ Model, ncol=2, drop = TRUE) +
-  geom_line(data, mapping = aes(x=Time, y=ll, color = Model)) + 
-  geom_line(data, mapping = aes(x=Time, y=ul, color = Model)) +
-  ylab("Upper and Lower Forecast Limits (95%)")
-  
-  #geom_ribbon(data, mapping = aes(ymin=ll,ymax=ul), fill="blue", alpha="0.1")
-p
-```
 
 ```{r}
 

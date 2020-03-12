@@ -1,68 +1,53 @@
 Model Compare Univariate
 ================
 Nikhil Gupta
-2020-03-12 06:10:40
+2020-03-12 17:22:32
 
 ``` r
 library(tswge)
-```
-
-    ## Warning: package 'tswge' was built under R version 3.5.3
-
-``` r
 library(tswgewrapped)
 library(tidyverse)
 ```
-
-    ## Warning: package 'tidyverse' was built under R version 3.5.3
-
-    ## -- Attaching packages ----------------------------------------------------------------------------------------------------- tidyverse 1.2.1 --
-
-    ## v ggplot2 3.2.0     v purrr   0.3.2
-    ## v tibble  2.1.3     v dplyr   0.8.3
-    ## v tidyr   0.8.3     v stringr 1.4.0
-    ## v readr   1.3.1     v forcats 0.4.0
-
-    ## Warning: package 'ggplot2' was built under R version 3.5.3
-
-    ## Warning: package 'tibble' was built under R version 3.5.3
-
-    ## Warning: package 'tidyr' was built under R version 3.5.3
-
-    ## Warning: package 'readr' was built under R version 3.5.2
-
-    ## Warning: package 'purrr' was built under R version 3.5.3
-
-    ## Warning: package 'dplyr' was built under R version 3.5.3
-
-    ## Warning: package 'stringr' was built under R version 3.5.3
-
-    ## Warning: package 'forcats' was built under R version 3.5.3
-
-    ## -- Conflicts -------------------------------------------------------------------------------------------------------- tidyverse_conflicts() --
-    ## x dplyr::filter() masks stats::filter()
-    ## x dplyr::lag()    masks stats::lag()
 
 ``` r
 source("ModelCompareUnivariate.R")
 ```
 
-    ## Warning: package 'R6' was built under R version 3.5.3
-
 ``` r
 data("airlog")
 
-models = list("ARMA Model 1A" = list(phi = c(0.5, 1), theta = c(0.5), sliding_ase = FALSE),
-              "ARMA Model 1B" = list(phi = c(0.5, 1), theta = c(0.5), sliding_ase = TRUE),
-              "ARMIA Model 2" = list(phi = c(0.5, 1), p = 2, d = 1, sliding_ase = TRUE),
-              "ARMUA Model 3" = list(phi = c(0.5, 1), d = 1, s = 12, sliding_ase = TRUE))
+# Woodward Gray Airline Model
+phi_wg = c(-0.36, -0.05, -0.14, -0.11, 0.04, 0.09, -0.02, 0.02, 0.17, 0.03, -0.10, -0.38)
+d_wg = 1
+s_wg = 12
+
+# Parzen Model
+phi_pz = c(0.7400, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.3800, -0.2812)
+s_pz = 12
+
+# Box Model
+d_bx = 1
+s_bx = 12  
+theta_bx =  c(0.40, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0.60, -0.24)
+
+
+models = list("Woodward Gray Model A" = list(phi = phi_wg, d = d_wg, s = s_wg, sliding_ase = FALSE),
+              "Woodward Gray Model B" = list(phi = phi_wg, d = d_wg, s = s_wg, sliding_ase = TRUE),
+              "Parzen Model A" = list(phi = phi_pz, s = s_pz, sliding_ase = FALSE),
+              "Parzen Model B" = list(phi = phi_pz, s = s_pz, sliding_ase = TRUE),
+              "Box Model A" = list(theta = theta_bx, d = d_bx, s = s_bx, sliding_ase = FALSE),
+              "Box Model B" = list(theta = theta_bx, d = d_bx, s = s_bx, sliding_ase = TRUE)
+              )
 ```
 
 ``` r
-mdl_compare = ModelCompareUnivariate$new(x = airlog, mdl_list = models, n.ahead = 12, batch_size = 60)
+mdl_compare = ModelCompareUnivariate$new(x = airlog, mdl_list = models, n.ahead = 36, batch_size = 72)
 ```
 
-    ## Computing metrics for:  ARMA Model 1A
+    ## 
+    ## 
+    ## 
+    ## Computing metrics for:  Woodward Gray Model A
 
     ## Warning in private$sliding_ase(x = self$get_x(), phi = self$get_models()
     ## [[name]][["phi"]], : Batch Size has not been specified. Will assume a
@@ -70,12 +55,43 @@ mdl_compare = ModelCompareUnivariate$new(x = airlog, mdl_list = models, n.ahead 
 
     ## 
     ## Number of batches expected:  1 
-    ## Computing metrics for:  ARMA Model 1B 
-    ## Number of batches expected:  8 
-    ## Computing metrics for:  ARMIA Model 2 
-    ## Number of batches expected:  8 
-    ## Computing metrics for:  ARMUA Model 3 
-    ## Number of batches expected:  8
+    ## 
+    ## 
+    ## 
+    ## Computing metrics for:  Woodward Gray Model B 
+    ## Number of batches expected:  3 
+    ## 
+    ## 
+    ## 
+    ## Computing metrics for:  Parzen Model A
+
+    ## Warning in private$sliding_ase(x = self$get_x(), phi = self$get_models()
+    ## [[name]][["phi"]], : Batch Size has not been specified. Will assume a
+    ## single batch
+
+    ## 
+    ## Number of batches expected:  1 
+    ## 
+    ## 
+    ## 
+    ## Computing metrics for:  Parzen Model B 
+    ## Number of batches expected:  3 
+    ## 
+    ## 
+    ## 
+    ## Computing metrics for:  Box Model A
+
+    ## Warning in private$sliding_ase(x = self$get_x(), phi = self$get_models()
+    ## [[name]][["phi"]], : Batch Size has not been specified. Will assume a
+    ## single batch
+
+    ## 
+    ## Number of batches expected:  1 
+    ## 
+    ## 
+    ## 
+    ## Computing metrics for:  Box Model B 
+    ## Number of batches expected:  3
 
 ``` r
 mdl_compare$plot_histogram_ases()
@@ -93,11 +109,9 @@ mdl_compare$plot_forecasts(only_sliding = TRUE)
 mdl_compare$statistical_compare()  
 ```
 
-    ##             Df Sum Sq Mean Sq F value Pr(>F)    
-    ## Model        3  616.9  205.62   743.3 <2e-16 ***
-    ## Residuals   21    5.8    0.28                   
-    ## ---
-    ## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+    ##             Df   Sum Sq   Mean Sq F value Pr(>F)
+    ## Model        2 0.001460 0.0007298   2.197  0.192
+    ## Residuals    6 0.001993 0.0003322               
     ## 
     ## 
     ##   Tukey multiple comparisons of means
@@ -106,23 +120,24 @@ mdl_compare$statistical_compare()
     ## Fit: aov(formula = ASE ~ Model, data = results)
     ## 
     ## $Model
-    ##                                    diff         lwr         upr     p adj
-    ## ARMA Model 1B-ARMA Model 1A -25.3309119 -26.8858531 -23.7759707 0.0000000
-    ## ARMIA Model 2-ARMA Model 1A -25.4779990 -27.0329403 -23.9230578 0.0000000
-    ## ARMUA Model 3-ARMA Model 1A -25.2215646 -26.7765058 -23.6666234 0.0000000
-    ## ARMIA Model 2-ARMA Model 1B  -0.1470871  -0.8800935   0.5859192 0.9429453
-    ## ARMUA Model 3-ARMA Model 1B   0.1093473  -0.6236590   0.8423536 0.9751573
-    ## ARMUA Model 3-ARMIA Model 2   0.2564344  -0.4765719   0.9894408 0.7648553
+    ##                                              diff         lwr        upr
+    ## Parzen Model B-Box Model B            0.028566162 -0.01709432 0.07422664
+    ## Woodward Gray Model B-Box Model B     0.003429999 -0.04223048 0.04909048
+    ## Woodward Gray Model B-Parzen Model B -0.025136163 -0.07079665 0.02052432
+    ##                                          p adj
+    ## Parzen Model B-Box Model B           0.2134940
+    ## Woodward Gray Model B-Box Model B    0.9712778
+    ## Woodward Gray Model B-Parzen Model B 0.2838256
 
     ## Call:
     ##    aov(formula = ASE ~ Model, data = results)
     ## 
     ## Terms:
-    ##                    Model Residuals
-    ## Sum of Squares  616.8658    5.8092
-    ## Deg. of Freedom        3        21
+    ##                       Model   Residuals
+    ## Sum of Squares  0.001459617 0.001993128
+    ## Deg. of Freedom           2           6
     ## 
-    ## Residual standard error: 0.5259562
+    ## Residual standard error: 0.01822602
     ## Estimated effects may be unbalanced
 
 ``` r
@@ -130,40 +145,15 @@ mdl_compare$statistical_compare()
 ```
 
 ``` r
-mdl_compare$get_tabular_metrics(ases = TRUE)
+ASEs = mdl_compare$get_tabular_metrics(ases = TRUE)
+DT::datatable(ASEs)
 ```
 
-    ## # A tibble: 25 x 5
-    ##    Model             ASE Time_Test_Start Time_Test_End Batch
-    ##    <chr>           <dbl>           <dbl>         <dbl> <dbl>
-    ##  1 ARMA Model 1A 25.9                133           144     1
-    ##  2 ARMA Model 1B  1.82                49            60     1
-    ##  3 ARMA Model 1B  0.449               61            72     2
-    ##  4 ARMA Model 1B  0.0952              73            84     3
-    ##  5 ARMA Model 1B  0.635               85            96     4
-    ##  6 ARMA Model 1B  0.572               97           108     5
-    ##  7 ARMA Model 1B  0.868              109           120     6
-    ##  8 ARMA Model 1B  0.125              121           132     7
-    ##  9 ARMA Model 1B  0.127              133           144     8
-    ## 10 ARMIA Model 2  0.667               49            60     1
-    ## # ... with 15 more rows
+![](ModelCompareUnivariate_files/figure-markdown_github/unnamed-chunk-8-1.png)
 
 ``` r
-data = mdl_compare$get_tabular_metrics(ases = FALSE)
-data
+forecasts = mdl_compare$get_tabular_metrics(ases = FALSE)
+DT::datatable(forecasts)
 ```
 
-    ## # A tibble: 720 x 5
-    ##    Model          Time     f    ll    ul
-    ##    <chr>         <dbl> <dbl> <dbl> <dbl>
-    ##  1 ARMA Model 1A     1    NA    NA    NA
-    ##  2 ARMA Model 1A     2    NA    NA    NA
-    ##  3 ARMA Model 1A     3    NA    NA    NA
-    ##  4 ARMA Model 1A     4    NA    NA    NA
-    ##  5 ARMA Model 1A     5    NA    NA    NA
-    ##  6 ARMA Model 1A     6    NA    NA    NA
-    ##  7 ARMA Model 1A     7    NA    NA    NA
-    ##  8 ARMA Model 1A     8    NA    NA    NA
-    ##  9 ARMA Model 1A     9    NA    NA    NA
-    ## 10 ARMA Model 1A    10    NA    NA    NA
-    ## # ... with 710 more rows
+![](ModelCompareUnivariate_files/figure-markdown_github/unnamed-chunk-10-1.png)

@@ -74,7 +74,7 @@ ModelCompareUnivariate = R6Class(
       for (name in names(self$get_models())){
         
         if (self$models[[name]][['metric_has_been_computed']] == FALSE){
-          cat(paste("Computing metrics for: ", name, "\n"))
+          cat(paste("\n\n\nComputing metrics for: ", name, "\n"))
           
           res = private$sliding_ase(x = self$get_x(),
                                     phi = self$get_models()[[name]][['phi']],
@@ -192,34 +192,45 @@ ModelCompareUnivariate = R6Class(
       }
       else {
         results = tribble(~Model, ~Time, ~f, ~ll, ~ul) 
-        #results = tribble(~Model, ~f, ~ll, ~ul) 
       }
+      
+      model_names = c()
       
       for (name in names(self$get_models())){
         if (self$models[[name]][['metric_has_been_computed']] == TRUE){
-          
-          if (ases == TRUE){
-            results = results %>% add_row(Model = name,
-                                          ASE = self$models[[name]][['ASEs']],
-                                          Time_Test_Start = self$models[[name]][['time_test_start']],
-                                          Time_Test_End = self$models[[name]][['time_test_end']],
-                                          Batch = self$models[[name]][['batch_num']])
+          if(only_sliding == TRUE){
+            if (self$models[[name]][['sliding_ase']] == TRUE){
+              model_names = c(model_names, name)
+            }
           }
-          
           else{
-            results = results %>% add_row(Model = name,
-                                          Time = self$models[[name]][['time.forecasts']],
-                                          f = self$models[[name]][['f']],
-                                          ll = self$models[[name]][['ll']],
-                                          ul = self$models[[name]][['ul']])
-
+            model_names = c(model_names, name)
           }
         }
         else{
           warning(paste("Metrics have not been computed for Model: '", name, "'. These will not be plotted."))
         }
       }
-      
+          
+      for (name in model_names){    
+        if (ases == TRUE){
+          results = results %>% add_row(Model = name,
+                                        ASE = self$models[[name]][['ASEs']],
+                                        Time_Test_Start = self$models[[name]][['time_test_start']],
+                                        Time_Test_End = self$models[[name]][['time_test_end']],
+                                        Batch = self$models[[name]][['batch_num']])
+        }
+        
+        else{
+          results = results %>% add_row(Model = name,
+                                        Time = self$models[[name]][['time.forecasts']],
+                                        f = self$models[[name]][['f']],
+                                        ll = self$models[[name]][['ll']],
+                                        ul = self$models[[name]][['ul']])
+
+        }
+      }
+        
       if (ases == FALSE){
         # Add the realization as well
         results = results %>% add_row(Model = "Realization",
