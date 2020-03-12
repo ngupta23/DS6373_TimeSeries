@@ -63,7 +63,24 @@ mdl_compare$get_tabular_metrics(ases = TRUE)
 ```
 
 ```{r}
-mdl_compare$get_tabular_metrics(ases = FALSE)
+data = mdl_compare$get_tabular_metrics(ases = FALSE)
+data
+```
+
+```{r eval=FALSE, fig.height=8, fig.width=10, include=FALSE}
+# Just Testing
+data_no_realization = data %>% filter(Model != "Realization")
+data_only_realization = data %>% filter(Model == "Realization")
+
+p = ggplot() +# data_only_realization, mapping = aes(x=Time, y=ul, color = Model)) + geom_line() +
+  #geom_line(data_only_realization, mapping = aes(x=Time, y=ul, color = Model)) +
+  #facet_wrap( ~ Model, ncol=2, drop = TRUE) +
+  geom_line(data, mapping = aes(x=Time, y=ll, color = Model)) + 
+  geom_line(data, mapping = aes(x=Time, y=ul, color = Model)) +
+  ylab("Upper and Lower Forecast Limits (95%)")
+  
+  #geom_ribbon(data, mapping = aes(ymin=ll,ymax=ul), fill="blue", alpha="0.1")
+p
 ```
 
 ```{r}

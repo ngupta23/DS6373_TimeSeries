@@ -88,7 +88,9 @@ ModelCompareUnivariate = R6Class(
 
           ## Inplace
           self$models[[name]][['ASEs']] = res$ASEs  
-          self$models[[name]][['time.rolling.ase']] = res$time.rolling.ase
+          self$models[[name]][['time_test_start']] = res$time_test_start
+          self$models[[name]][['time_test_end']] = res$time_test_end
+          self$models[[name]][['batch_num']] = res$batch_num
           self$models[[name]][['f']] = res$f
           self$models[[name]][['ll']] = res$ll
           self$models[[name]][['ul']] = res$ul
@@ -131,14 +133,39 @@ ModelCompareUnivariate = R6Class(
       results.forecasts = results.forecasts %>% 
         filter(Model %in% model_subset)
       
-      rects = data.frame(xstart = seq(49,133,12), xend = seq(60,144,12), Batch = rep(1, 8))
+      # https://stackoverflow.com/questions/9968975/make-the-background-of-a-graph-different-colours-in-different-regions
+      
+      # Get Batch Boundaries
+      results.ases = self$get_tabular_metrics(ases = TRUE)
+      for (name in names(self$get_models())){
+        if (self$models[[name]][['sliding_ase']] == TRUE){
+          results.batches = results.ases %>% 
+            filter(Model == name)
+          break()
+        }
+      }
+      
+      rects = data.frame(xstart = results.batches[['Time_Test_Start']],
+                         xend = results.batches[['Time_Test_End']],
+                         Batch = rep(1, length(results.batches[['Batch']])))
+      
+      
       p = ggplot() + 
         geom_rect(data = rects, aes(xmin = xstart, xmax = xend, ymin = -Inf, ymax = Inf, fill = Batch), alpha = 0.1, show.legend = FALSE) +  
-        geom_line(results.forecasts, mapping = aes(x = Time, y = f, color = Model))  
-        
-        
+        geom_line(results.forecasts, mapping = aes(x = Time, y = f, color = Model)) +
+        ylab("Forecasts")
       
       print(p) 
+      
+      
+      p = ggplot() +
+        geom_rect(data = rects, aes(xmin = xstart, xmax = xend, ymin = -Inf, ymax = Inf, fill = Batch), alpha = 0.1, show.legend = FALSE) +  
+        geom_line(results.forecasts, mapping = aes(x=Time, y=ll, color = Model)) + 
+        geom_line(results.forecasts, mapping = aes(x=Time, y=ul, color = Model)) +
+        ylab("Upper and Lower Forecast Limits (95%)")
+      
+      print(p)
+      
     },
     
     statistical_compare = function(){
@@ -161,7 +188,7 @@ ModelCompareUnivariate = R6Class(
       # ases = FALSE returns the forecasts, and the lower limits and upper limits asscoiated with the forecasts
       
       if (ases == TRUE){
-        results = tribble(~Model, ~ASE, ~Time) 
+        results = tribble(~Model, ~ASE, ~Time_Test_Start, ~Time_Test_End, ~Batch) 
       }
       else {
         results = tribble(~Model, ~Time, ~f, ~ll, ~ul) 
@@ -174,8 +201,11 @@ ModelCompareUnivariate = R6Class(
           if (ases == TRUE){
             results = results %>% add_row(Model = name,
                                           ASE = self$models[[name]][['ASEs']],
-                                          Time = self$models[[name]][['time.rolling.ase']])
+                                          Time_Test_Start = self$models[[name]][['time_test_start']],
+                                          Time_Test_End = self$models[[name]][['time_test_end']],
+                                          Batch = self$models[[name]][['batch_num']])
           }
+          
           else{
             results = results %>% add_row(Model = name,
                                           Time = self$models[[name]][['time.forecasts']],
@@ -195,8 +225,8 @@ ModelCompareUnivariate = R6Class(
         results = results %>% add_row(Model = "Realization",
                                       Time = seq(1, self$get_len_x(), 1),
                                       f = self$get_x(),
-                                      ll = rep(NA, self$get_len_x()),
-                                      ul = rep(NA, self$get_len_x()))
+                                      ll = self$get_x(),
+                                      ul = self$get_x())
       }
       
       return(results)
@@ -270,7 +300,6 @@ ModelCompareUnivariate = R6Class(
                            phi = 0, theta = 0, d = 0, s = 0, # ARUMA arguments
                            linear = NA, freq = NA,           # Signal + Noise arguments
                            n.ahead = NA, batch_size = NA,    # Forecasting specific arguments
-                           time_index = 'test_start',        # Time Index to return ("<test|data>_<start|end>") 
                            step_n.ahead = FALSE,
                            ...)                              # max.p (sigplusnoise), lambda (ARUMA)      
     {
@@ -323,7 +352,9 @@ ModelCompareUnivariate = R6Class(
       cat(paste("Number of batches expected: ", num_batches, "\n"))
       
       ASEs = numeric(num_batches)
-      time.rolling.ase = numeric(num_batches)
+      time_test_start = numeric(num_batches)
+      time_test_end = numeric(num_batches)
+      batch_num = numeric(num_batches)
       
       for (i in 0:(num_batches-1))
       {
@@ -336,21 +367,10 @@ ModelCompareUnivariate = R6Class(
         data_start = start
         data_end = i*step_size + batch_size
         
-        if (time_index == 'test_start'){
-          time.rolling.ase[i+1] = test_start
-        }
-        else if (time_index == 'test_end'){
-          time.rolling.ase[i+1] = test_end
-        }
-        else if (time_index == 'data_start'){
-          time.rolling.ase[i+1] = data_start
-        }
-        else if (time_index == 'data_end'){
-          time.rolling.ase[i+1] = data_end
-        }
-        else{
-          stop("You have not provided the correct time_index. Options are <data|test>_<start_end>")
-        }
+        time_test_start[i+1] = test_start
+        time_test_end[i+1] = test_end
+        batch_num[i+1] = i+1
+        
         
         test_data = x[test_start:test_end]
         
@@ -376,7 +396,9 @@ ModelCompareUnivariate = R6Class(
       # print(forecasts.f)
       
       return(list(ASEs = ASEs,
-                  time.rolling.ase = time.rolling.ase,
+                  time_test_start = time_test_start,
+                  time_test_end = time_test_end,
+                  batch_num = batch_num,
                   f = forecasts.f,
                   ll = forecasts.ll,
                   ul = forecasts.ul,

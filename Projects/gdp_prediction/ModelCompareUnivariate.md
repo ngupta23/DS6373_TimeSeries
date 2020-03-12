@@ -1,7 +1,7 @@
 Model Compare Univariate
 ================
 Nikhil Gupta
-2020-03-11 21:35:06
+2020-03-12 06:10:40
 
 ``` r
 library(tswge)
@@ -87,7 +87,7 @@ mdl_compare$plot_histogram_ases()
 mdl_compare$plot_forecasts(only_sliding = TRUE)
 ```
 
-![](ModelCompareUnivariate_files/figure-markdown_github/unnamed-chunk-6-1.png)
+![](ModelCompareUnivariate_files/figure-markdown_github/unnamed-chunk-6-1.png)![](ModelCompareUnivariate_files/figure-markdown_github/unnamed-chunk-6-2.png)
 
 ``` r
 mdl_compare$statistical_compare()  
@@ -133,23 +133,24 @@ mdl_compare$statistical_compare()
 mdl_compare$get_tabular_metrics(ases = TRUE)
 ```
 
-    ## # A tibble: 25 x 3
-    ##    Model             ASE  Time
-    ##    <chr>           <dbl> <dbl>
-    ##  1 ARMA Model 1A 25.9      133
-    ##  2 ARMA Model 1B  1.82      49
-    ##  3 ARMA Model 1B  0.449     61
-    ##  4 ARMA Model 1B  0.0952    73
-    ##  5 ARMA Model 1B  0.635     85
-    ##  6 ARMA Model 1B  0.572     97
-    ##  7 ARMA Model 1B  0.868    109
-    ##  8 ARMA Model 1B  0.125    121
-    ##  9 ARMA Model 1B  0.127    133
-    ## 10 ARMIA Model 2  0.667     49
+    ## # A tibble: 25 x 5
+    ##    Model             ASE Time_Test_Start Time_Test_End Batch
+    ##    <chr>           <dbl>           <dbl>         <dbl> <dbl>
+    ##  1 ARMA Model 1A 25.9                133           144     1
+    ##  2 ARMA Model 1B  1.82                49            60     1
+    ##  3 ARMA Model 1B  0.449               61            72     2
+    ##  4 ARMA Model 1B  0.0952              73            84     3
+    ##  5 ARMA Model 1B  0.635               85            96     4
+    ##  6 ARMA Model 1B  0.572               97           108     5
+    ##  7 ARMA Model 1B  0.868              109           120     6
+    ##  8 ARMA Model 1B  0.125              121           132     7
+    ##  9 ARMA Model 1B  0.127              133           144     8
+    ## 10 ARMIA Model 2  0.667               49            60     1
     ## # ... with 15 more rows
 
 ``` r
-mdl_compare$get_tabular_metrics(ases = FALSE)
+data = mdl_compare$get_tabular_metrics(ases = FALSE)
+data
 ```
 
     ## # A tibble: 720 x 5
