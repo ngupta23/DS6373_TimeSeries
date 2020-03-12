@@ -42,10 +42,29 @@ models = list("ARMA Model 1A" = list(phi = c(0.5, 1), theta = c(0.5), sliding_as
 
 
 ```{r}
-mdl_compare = ModelCompareUnivariate$new(x = airlog, mdl_list = models, n.ahead = 36, batch_size = 108)
+mdl_compare = ModelCompareUnivariate$new(x = airlog, mdl_list = models, n.ahead = 12, batch_size = 60)
+```
+
+```{r, warning=FALSE}
 mdl_compare$plot_histogram_ases()
 ```
 
+```{r, warning=FALSE, fig.height=4, fig.width=10}
+mdl_compare$plot_forecasts(only_sliding = TRUE)
+```
+
+```{r}
+mdl_compare$statistical_compare()  
+# Only compares models that have sliding_ase calculations, since we need more than 1 result per model
+```
+
+```{r}
+mdl_compare$get_tabular_metrics(ases = TRUE)
+```
+
+```{r}
+mdl_compare$get_tabular_metrics(ases = FALSE)
+```
 
 ```{r}
 
