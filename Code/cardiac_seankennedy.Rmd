@@ -1,0 +1,82 @@
+---
+title: "For Live 12"
+author: "Sean Kennedy"
+date: "3/24/2020"
+output: html_document
+---
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tswge)
+library(orcutt)
+library(tidyverse)
+library(vars)
+```
+
+
+```{r}
+CM = read.csv('la_cmort_study.csv')
+
+p = plotts.sample.wge(CM$cmort)
+
+#appears seasonal, yearly from spectral d
+CM_52 = artrans.wge(CM$cmort, phi.tr = c(rep(0, 51), 1))
+
+#model the residuals
+aic5.wge(CM_52, type='bic') #selects 2,0
+p_val_24 = ljung.wge(CM_52)$pval
+p_val_48 = ljung.wge(CM_52, K = 48)$pval #barely rejects
+acf(CM_52,lag.max = 48)
+c(p_val_24, p_val_48) # Fail to reject null (null is that rho_k are all uncorrelated)
+
+#seasonal model predictions
+predstemp = fore.aruma.wge(CM$temp,s = 52, n.ahead = 20)
+predspart = fore.aruma.wge(CM$part,s = 52, n.ahead = 20)
+
+CM$Week_F = as.factor(CM$Week%%52)
+
+# Model cmort based on predicted part and temp using MLR with Cor Erros (cor errors b/c time is included?)
+ksfit = lm(cmort~temp+part+Week+Week_F, data = CM)
+phi = aic.wge(ksfit$residuals)
+
+fit = arima(CM$cmort,order = c(phi$p,0,0), seasonal = list(order = c(1,0,0), period = 52), xreg = cbind(CM$temp, CM$part, CM$Week, CM$Week_F))
+
+# Check for whiteness of residuals
+acf(fit$residuals) #appear white, but still FTR for the test
+ljung.wge(fit$residuals) # pval = .048
+ljung.wge(fit$residuals, K = 48) # pval = .002
+
+
+#load the forecasted Part and Temp in a data frame
+
+next20 = data.frame(temp = predstemp$f, part = predspart$f, Week = seq(509,528,1), Week_F = seq(509,528,1)%%52)
+
+#get predictions
+predsCMort = predict(fit,newxreg = next20)
+#plot next 20 cmort wrt time
+plot(seq(1,508,1), CM$cmort, type = "l",xlim = c(0,528), ylab = "Cardiac Mortality", main = "20 Week Cardiac Mortality Forecast")
+lines(seq(509,528,1), predsCMort$pred, type = "l", col = "red")
+
+#Find ASE  Need to forecast last 30 of known series.  
+CMsmall = CM[1:478,]
+ksfit = lm(cmort~temp+part+Week+Week_F, data = CMsmall)
+phi = aic.wge(ksfit$residuals)
+attach(CMsmall)
+
+#getting an error here...
+#Error in optim(init[mask], armafn, method = optim.method, hessian = TRUE, : initial value in 'vmmin' is not finite
+fit = arima(cmort,order = c(phi$p,0,0), seasonal = list(order = c(1,0,0), period = 52), xreg = cbind(temp, part, Week, Week_F))
+
+Week_test = seq(479,508,1)
+week_test_f = as.factor(Week_test%%52)         
+last30 = data.frame(cmort = CM$cmort[479:508], part = CM$part[479:508],  Week = seq(479,508,1), Week_F = seq(479,508,1)%%52)
+#get predictions
+predsCMort = predict(fit,newxreg = last30)
+
+
+ASE = mean((CM$cmort[479:508] - predsCMort$pred)^2)
+ASE
+summary(ksfit)
+```
+

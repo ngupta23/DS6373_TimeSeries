@@ -1,0 +1,761 @@
+---
+title: "Time Series - Async Week 11"
+author: "Nikhil Gupta"
+date: "`r Sys.time()`"
+output:
+  word_document:
+    toc: yes
+    toc_depth: '6'
+  html_document:
+    toc: yes
+    toc_depth: 6
+    toc_float: yes
+always_allow_html: yes
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Setup
+```{r}
+library(tswge)
+library(tswgewrapped)
+library(tidyverse)
+library(tseries)
+library(orcutt)
+```
+
+
+# Ljung - Box Test for White Noise
+
+## ARMA(2,1)
+```{r}
+x=gen.arma.wge(n=100, phi=c(1.6,-.9), theta=.8, sn=67)
+x=x+10
+px = plotts.sample.wge(x)
+```
+
+```{r}
+aic.wge(x,p=0:8,q=0:4)
+# AIC picks ARMA(2,1)
+```
+
+```{r}
+x21=est.arma.wge(x,p=2,q=1)
+# x21$phi: 1.6194830 -0.9131788
+# x21$theta: 0.868127
+# x21$vara: 1.076196
+mean(x)  # 10.07557
+```
+
+### Testing White Noise Terms
+
+#### Step 1: Visual Check
+```{r}
+
+# x21$res: Contains residuals from the ARMA(2,1) fit
+px = plotts.wge(x21$res)
+acf(x21$res)
+```
+
+#### Step 2: Ljung-Box Test
+
+```{r}
+ljung.wge(x21$res, p=2, q=1)
+# $K: 24  (default)
+# $chi.square: 20.92251
+# $df: 21
+# $pval: 0.4636851
+```
+
+```{r}
+ljung.wge(x21$res,p=2,q=1,K=48)
+# $K: 48 
+# $chi.square: 44.93891
+# $df: 45
+# $pval: 0.4636851
+```
+
+## ARIMA with s = 12
+```{r}
+x=gen.aruma.wge(n=200,s=12,phi=c(1.5,-.8),sn=87)
+x=x+50
+px = plotts.sample.wge(x,lag.max=60)
+```
+
+```{r}
+y=artrans.wge(x,phi.tr=c(0,0,0,0,0,0,0,0,0,0,0,1))
+```
+
+```{r}
+aic.wge(y, type = 'bic')
+```
+
+```{r}
+est.y = est.ar.wge(y,p=2)
+```
+
+### Testing White Noise Terms
+
+#### Step 1: Visual Check
+```{r}
+
+# x21$res: Contains residuals from the ARMA(2,1) fit
+px = plotts.wge(est.y$res)
+acf(x21$res)
+```
+
+#### Step 2: Ljung-Box Test
+
+```{r}
+ljung.wge(est.y$res,p=2)
+# $K: 24  (default)
+# $chi.square: 20.95537
+# $df: 22
+# $pval: 0.5234977
+```
+
+```{r}
+ljung.wge(est.y$res,p=2,K=48)
+# $K: 48 
+# $chi.square: 47.62509
+# $df: 46
+# $pval: 0.4063877
+```
+
+## Airlog
+```{r}
+data("airlog")
+x = airlog
+```
+
+```{r}
+px = plotts.sample.wge(x)
+```
+
+### Overfit Table
+
+
+```{r}
+factor.wge.season(12)
+```
+
+
+```{r}
+e = est.ar.wge(x, p = 24, type = 'burg')
+```
+
+* Has (1-B) and (1-B12) terms
+
+### Transformation
+```{r}
+# Difference the data
+d1=artrans.wge(airlog,phi.tr=1)
+```
+
+```{r}
+# Transform differenced data by 1-B^12
+s12=c(0,0,0,0,0,0,0,0,0,0,0,1)
+d1.12=artrans.wge(d1,phi.tr=s12)
+```
+
+### Fit Stationary
+```{r}
+aic.wge(d1.12,p=0:15,q=0:3)
+# aic and aicc pick ARMA(12,1)
+```
+
+```{r}
+# estimate parameters of stationary part
+est.12.1=est.arma.wge(d1.12, p=12, q=1)
+```
+
+### Testing White Noise Terms
+
+#### Step 1: Visual Check
+```{r}
+px = plotts.wge(est.12.1$res)
+acf(est.12.1$res, lag.max = 50)
+```
+
+#### Step 2: Ljung-Box Test
+
+```{r}
+ljung.wge(est.12.1$res, p=12, q = 1)
+```
+
+```{r}
+ljung.wge(est.12.1$res, p=12, q = 1, K=48)
+```
+
+## 11.3 #2
+
+```{r}
+x = airlog
+```
+
+
+### Transformation
+```{r}
+# Difference the data
+d1=artrans.wge(airlog,phi.tr=1)
+```
+
+```{r}
+# Transform differenced data by 1-B^12
+s12=c(0,0,0,0,0,0,0,0,0,0,0,1)
+d1.12=artrans.wge(d1,phi.tr=s12)
+```
+
+### Estimate Stationary Part
+```{r}
+# estimate parameters of stationary part
+ww = est.arma.wge(d1.12, p=12)
+```
+
+### Testing White Noise Terms
+
+#### Step 1: Visual Check
+```{r}
+px = plotts.wge(ww$res)
+acf(ww$res)
+```
+
+#### Step 2: Ljung-Box Test
+
+```{r}
+ljung.wge(ww$res, p=12)
+```
+
+```{r}
+ljung.wge(ww$res, p=12, K=48)
+
+```
+
+## Global Temperature Data
+
+```{r}
+data(hadley)
+px = plotts.sample.wge(hadley)
+```
+
+### Startionary Model
+```{r}
+aic5.wge(hadley,p=0:6,q=0:1)
+# AIC picks an ARMA(3,1) stationary model
+```
+
+```{r}
+had.est=est.arma.wge(hadley,p=3,q=1)
+# $phi: 1.2700171 -0.4685313  0.1911988
+# $theta: 0.6322319
+# $avar: 0.01074178
+
+mean(hadley)  # -0.1684937
+```
+
+#### Checking White Noise Terms
+```{r}
+px = plotts.sample.wge(had.est$res, arlimits=TRUE)
+```
+
+```{r}
+ljung.wge(had.est$res,p=3,q=1)
+```
+
+```{r}
+ljung.wge(had.est$res,p=3,q=1,K=48)
+```
+
+#### Checking Similar Realizations
+```{r}
+px = gen.arma.wge(n = length(hadley), phi = had.est$phi, theta = had.est$theta, vara = had.est$avar)
+px = gen.arma.wge(n = length(hadley), phi = had.est$phi, theta = had.est$theta, vara = had.est$avar)
+px = gen.arma.wge(n = length(hadley), phi = had.est$phi, theta = had.est$theta, vara = had.est$avar)
+px = gen.arma.wge(n = length(hadley), phi = had.est$phi, theta = had.est$theta, vara = had.est$avar)
+```
+
+* These realizations all have wandering behavior (although they show decreasing values in some)
+* This may be consistent with the global temp data
+
+### Non Stationary Model
+
+#### Overfit Table
+```{r}
+e = est.ar.wge(hadley, p = 6)
+```
+
+* Consistent with (1-B) term
+
+#### Dickey Fuller Test
+```{r}
+adf = adf.test(hadley)
+adf$p.value
+```
+
+* ADF also points to a non stationary model
+
+#### Transform Data
+```{r}
+d1.temp=artrans.wge(hadley,phi.tr=1)
+px = plotts.sample.wge(d1.temp, arlimits=TRUE)
+```
+
+* Not really White noise since the 1st 2 are outside the limit lines.
+
+```{r}
+aic5.wge(d1.temp, p=0:6, q=0:1)
+# AIC selects an ARMA(2,1)
+```
+
+```{r}
+d1.temp.est = est.arma.wge(d1.temp, p=2, q=1)
+# $phi: 0.3274341 -0.1786827
+# $theta: 0.704618
+# $avar: 0.01058826
+```
+
+#### Testing White Noise Terms
+```{r}
+px = plotts.sample.wge(d1.temp.est$res,arlimits=TRUE)
+```
+
+```{r}
+ljung.wge(d1.temp.est$res,p=2,q=1)
+```
+
+```{r}
+ljung.wge(d1.temp.est$res,p=2,q=1,K=48)
+```
+
+#### Checking Similar Realizations
+```{r}
+px = gen.aruma.wge(n = length(hadley), d = 1, phi = d1.temp.est$phi, theta = d1.temp.est$theta, vara = d1.temp.est$avar)
+px = gen.aruma.wge(n = length(hadley), d = 1, phi = d1.temp.est$phi, theta = d1.temp.est$theta, vara = d1.temp.est$avar)
+px = gen.aruma.wge(n = length(hadley), d = 1, phi = d1.temp.est$phi, theta = d1.temp.est$theta, vara = d1.temp.est$avar)
+px = gen.aruma.wge(n = length(hadley), d = 1, phi = d1.temp.est$phi, theta = d1.temp.est$theta, vara = d1.temp.est$avar)
+```
+
+### Forecast Comparison
+
+```{r}
+f = fore.arma.wge(hadley,phi=c(1.27,-.47,.19), theta=.63, n.ahead=50, limits=TRUE)
+```
+
+```{r}
+f = fore.aruma.wge(hadley,d=1,phi=c(.33,-.18), theta=.7, n.ahead=50, limits=TRUE)
+```
+
+## Signal Plus Noise Model
+
+### Fit a GLM model
+```{r}
+x=hadley
+n=length(x)
+t=1:n
+d = lm(x~t)
+d
+```
+
+```{r}
+# x.z are the residuals from the regression line
+# Could have also used d$residuals to compute residuals
+x.z = x-d$coefficients[1]-d$coefficients[2]*t 
+```
+
+### Manual Cochrane Orcutt Test
+```{r}
+# Fit AR(p) to the residuals
+ar.z = aic.wge(x.z,p=0:6)
+ar.z$p # is the order p
+ar.z$phi # is vector of ar.z$p estimated AR coefficients
+```
+
+```{r}
+# We transform the original data to get Yt = Phi(B)Xt
+y.trans = artrans.wge(hadley, phi.tr=ar.z$phi)  
+```
+
+```{r}
+# Transform the time variable
+#ar.z$phi is vector of ar.z$p estimated AR coefficients
+t.trans = artrans.wge(t, phi.tr=ar.z$phi)
+```
+
+
+```{r}
+# For a linear Regression model to the transformed variables to check if the trend still exists after removing the autocorrelation terms.
+fit = lm(y.trans~t.trans)
+summary(fit)
+```
+
+### Evaluate White Noise Terms
+```{r}
+plot(fit$residuals)
+acf(fit$residuals)
+```
+
+```{r}
+ljung.wge(fit$residuals, p = 4)  # In the videos p was not provided - why?
+```
+
+```{r}
+ljung.wge(fit$residuals, p = 4, K = 48) # In the videos p was not provided - why?
+```
+
+### Checking Similar Realizations
+```{r}
+x = gen.sigplusnoise.wge(length(hadley), b0 = -0.5257, b1 = 0.0044, phi = ar.z$phi, vara = 0.0103)
+x = gen.sigplusnoise.wge(length(hadley), b0 = -0.5257, b1 = 0.0044, phi = ar.z$phi, vara = 0.0103)
+x = gen.sigplusnoise.wge(length(hadley), b0 = -0.5257, b1 = 0.0044, phi = ar.z$phi, vara = 0.0103)
+x = gen.sigplusnoise.wge(length(hadley), b0 = -0.5257, b1 = 0.0044, phi = ar.z$phi, vara = 0.0103)
+```
+
+* These loook consistent with the actual data
+
+### Forecast 
+```{r}
+f = fore.sigplusnoise.wge(hadley, linear = TRUE, max.p=4, n.ahead=50, limits=TRUE)
+```
+
+## Sunspot Data
+
+```{r}
+data("sunspot.classic")
+p = plotts.sample.wge(sunspot.classic, lag.max = 50, arlimits = TRUE)
+```
+
+### Box-Jenkins Model
+#### Model ID
+```{r}
+acf(sunspot.classic)
+pacf(sunspot.classic)
+```
+
+* PACF is indicative of a AR(2) model
+
+#### Parameter Estimation
+```{r}
+s2=est.ar.wge(sunspot.classic, p=2)
+s2$phi # 1.3347282 -0.6474423
+s2$avar # 235.993
+mean(sunspot.classic)  # 44.78409
+```
+
+#### Evaluate White Noise Terms
+```{r}
+p = plotts.wge(s2$res)
+acf(s2$res, lag.max = 50)
+```
+
+```{r}
+ljung.wge(s2$res, p = 2) 
+```
+
+```{r}
+ljung.wge(s2$res, p = 2, K = 48) 
+```
+
+* The residuals look reasonably white
+* Sample autocorrelation of the residuals stay within the 95% limit lines
+* **Ljung-Box did not reject the null of white noise at K=48 (p-value=.21) but at K=48 (p-value=.05) the conclusion of white noise is somewhat questionable**
+
+### AIC Model
+
+#### Model ID
+```{r}
+aic5.wge(sunspot.classic, p=0:10, q=0:0)
+# AIC picks an AR(8)
+# FYI BIC selects an AR(2)
+```
+
+#### Parameter Estimation
+```{r}
+s8 = est.ar.wge(sunspot.classic, p=8)
+s8$phi  # 1.22872595 -0.47331327 -0.13807811  0.15688938 -0.14030802  0.07050449 -0.12841889 0.20692558
+s8$avar # 212.6003
+mean(sunspot.classic)  # 44.78409
+```
+
+#### Evaluate White Noise Terms
+```{r}
+p = plotts.wge(s8$res)
+acf(s8$res, lag.max = 50)
+```
+
+```{r}
+ljung.wge(s8$res, p = 8) 
+```
+
+```{r}
+ljung.wge(s8$res, p = 8, K = 48) 
+```
+
+* Again, the residuals look reasonably white
+* Sample autocorrelation of the residuals stay within the 95% limit lines
+* Ljung-Box did not reject the null of white noise at K=24 or at K=48 with p-values of .33 and .24, respectively 
+
+### Comparing Models
+
+```{r}
+# Figure 9.8   4 Realizations from BJR AR(2) model for SS data 
+sun2 = est.arma.wge(sunspot.classic,p=2)
+
+s21=gen.arma.wge(n=176, phi=sun2$phi, vara=236,sn=151)+44.78
+s22=gen.arma.wge(n=176, phi=sun2$phi, vara=236,sn=161)+44.78
+s23=gen.arma.wge(n=176, phi=sun2$phi, vara=236,sn=171)+44.78
+s24=gen.arma.wge(n=176, phi=sun2$phi, vara=236,sn=181)+44.78
+
+# Figure 9.9   4 reAalizations from AR(8) model for SS data 
+sun8=est.arma.wge(sunspot.classic,p=8)
+s81=gen.arma.wge(n=176,phi=sun8$phi,vara=213,sn=938)+44.78
+s82=gen.arma.wge(n=176,phi=sun8$phi,vara=213,sn=939)+44.78
+s83=gen.arma.wge(n=176,phi=sun8$phi,vara=213,sn=940)+44.78
+s84=gen.arma.wge(n=176,phi=sun8$phi,vara=213,sn=941)+44.78
+
+```
+
+
+#### Realizations
+
+```{r}
+numrows <- 2
+numcols <- 2
+timelab <- 'Time'
+valuelab <- ''
+
+fig.width <- 5.2
+fig.height <- 3.8
+cex.labs <- c(.8,.7,.8)
+par(mfrow=c(numrows,numcols),mar=c(3.5,2.5,.8,1))
+t<-1:176;
+
+k<-0:10;
+ff<-1:251
+f<-(ff-1)/500
+a.subtitle<-'(a)'
+b.subtitle<-'(b)'
+c.subtitle<-'(c)'
+d.subtitle<-'(d)'
+
+#
+plot(t,s21,type='o',xaxt='n',yaxt='n',cex=0.5,pch=16,cex.lab=.75,cex.axis=.75,lwd=.75,xlab='',ylab='',ylim=c(-90,190))
+axis(side=1,cex.axis=.9,mgp=c(3,0.15,0),tcl=-.3);
+axis(side=2,las=1,cex.axis=.9,mgp=c(3,.4,0),tcl=-.3)
+mtext(side=c(1,2,1),cex=cex.labs,text=c(timelab,valuelab,a.subtitle),line=c(1,1.1,2))
+#
+plot(t,s22,type='o',xaxt='n',yaxt='n',cex=0.5,pch=16,cex.lab=.75,cex.axis=.75,lwd=.75,xlab='',ylab='',ylim=c(-90,190))
+axis(side=1,cex.axis=.9,mgp=c(3,0.15,0),tcl=-.3);
+axis(side=2,las=1,cex.axis=.9,mgp=c(3,.4,0),tcl=-.3)
+mtext(side=c(1,2,1),cex=cex.labs,text=c(timelab,valuelab,b.subtitle),line=c(1,1.1,2))
+#
+plot(t,s23,type='o',xaxt='n',yaxt='n',cex=0.5,pch=16,cex.lab=.75,cex.axis=.75,lwd=.75,xlab='',ylab='',ylim=c(-90,190))
+axis(side=1,cex.axis=.9,mgp=c(3,0.15,0),tcl=-.3);
+axis(side=2,las=1,cex.axis=.9,mgp=c(3,.4,0),tcl=-.3)
+mtext(side=c(1,2,1),cex=cex.labs,text=c(timelab,valuelab,c.subtitle),line=c(1,1.1,2))
+#
+plot(t,s24,type='o',xaxt='n',yaxt='n',cex=0.5,pch=16,cex.lab=.75,cex.axis=.75,lwd=.75,xlab='',ylab='',ylim=c(-90,180))
+axis(side=1,cex.axis=.9,mgp=c(3,0.15,0),tcl=-.3);
+axis(side=2,las=1,cex.axis=.9,mgp=c(3,.4,0),tcl=-.3)
+mtext(side=c(1,2,1),cex=cex.labs,text=c(timelab,valuelab,d.subtitle),line=c(1,1.1,2))
+```
+
+
+```{r}
+numrows <- 2
+numcols <- 2
+timelab <- 'Time'
+valuelab <- ''
+
+cex.labs <- c(.8,.7,.8)
+
+par(mfrow=c(numrows,numcols),mar=c(3.5,2.5,.8,1))
+t<-1:176;
+
+k<-0:10;
+ff<-1:201
+f<-(ff-1)/400
+a.subtitle<-'(a)'
+b.subtitle<-'(b)'
+c.subtitle<-'(c)'
+d.subtitle<-'(d)'
+
+#
+#
+plot(t,s81,type='o',xaxt='n',yaxt='n',cex=0.5,pch=16,cex.lab=.75,cex.axis=.75,lwd=.75,xlab='',ylab='',ylim=c(-90,190))
+axis(side=1,cex.axis=.9,mgp=c(3,0.15,0),tcl=-.3);
+axis(side=2,las=1,cex.axis=.9,mgp=c(3,.4,0),tcl=-.3)
+mtext(side=c(1,2,1),cex=cex.labs,text=c(timelab,valuelab,a.subtitle),line=c(1,1.1,2))
+#
+plot(t,s82,type='o',xaxt='n',yaxt='n',cex=0.5,pch=16,cex.lab=.75,cex.axis=.75,lwd=.75,xlab='',ylab='',ylim=c(-90,190))
+axis(side=1,cex.axis=.9,mgp=c(3,0.15,0),tcl=-.3);
+axis(side=2,las=1,cex.axis=.9,mgp=c(3,.4,0),tcl=-.3)
+mtext(side=c(1,2,1),cex=cex.labs,text=c(timelab,valuelab,b.subtitle),line=c(1,1.1,2))
+#
+plot(t,s83,type='o',xaxt='n',yaxt='n',cex=0.5,pch=16,cex.lab=.75,cex.axis=.75,lwd=.75,xlab='',ylab='',ylim=c(-90,190))
+axis(side=1,cex.axis=.9,mgp=c(3,0.15,0),tcl=-.3);9
+axis(side=2,las=1,cex.axis=.9,mgp=c(3,.4,0),tcl=-.3)
+mtext(side=c(1,2,1),cex=cex.labs,text=c(timelab,valuelab,c.subtitle),line=c(1,1.1,2))
+#
+plot(t,s84,type='o',xaxt='n',yaxt='n',cex=0.5,pch=16,cex.lab=.75,cex.axis=.75,lwd=.75,xlab='',ylab='',ylim=c(-90,190))
+axis(side=1,cex.axis=.9,mgp=c(3,0.15,0),tcl=-.3);
+axis(side=2,las=1,cex.axis=.9,mgp=c(3,.4,0),tcl=-.3)
+mtext(side=c(1,2,1),cex=cex.labs,text=c(timelab,valuelab,d.subtitle),line=c(1,1.1,2))
+
+```
+
+#### Autocorrelations
+```{r}
+# Figure 9.10   autocorrelation estimates for ss data 
+
+numrows <- 1
+numcols <- 2
+freqlab <- 'Frequency'
+valuelab <- ''
+laglab<-'Lag'
+a.subtitle<-'(a) Sample autocorrelations for AR(2) realizations'
+b.subtitle<-'(b) Sample autocorrelations for AR(8) realizations'
+
+t<-1:100;
+k<-0:25
+sun=plotts.sample.wge(sunspot.classic)
+sun.aut=sun$autplt[1:26]
+s21p=plotts.sample.wge(s21)
+aut21=s21p$autplt[1:26]
+s22p=plotts.sample.wge(s22)
+aut22=s22p$autplt[1:26]
+s23p=plotts.sample.wge(s23)
+aut23=s23p$autplt[1:26]
+s24p=plotts.sample.wge(s24)
+aut24=s24p$autplt[1:26]
+
+
+s81p=plotts.sample.wge(s81)
+aut81=s81p$autplt[1:26]
+s82p=plotts.sample.wge(s82)
+aut82=s82p$autplt[1:26]
+s83p=plotts.sample.wge(s83)
+aut83=s83p$autplt[1:26]
+s84p=plotts.sample.wge(s84)
+aut84=s84p$autplt[1:26]
+
+k<-0:25;
+ff<-1:251
+f<-(ff-1)/500
+
+#
+#
+cex.labs <- c(.67,.7,.67)
+
+par(mfrow=c(numrows,numcols),mar=c(3.8,2.5,1,1))
+plot(k,sun.aut,type='o',xaxt='n',yaxt='n',cex=0.65,pch=16,cex.lab=.75,cex.axis=.75,lwd=2,xlab='',ylab='',ylim=c(-1,1))
+axis(side=1,cex.axis=.8,mgp=c(3,0.15,0),tcl=-.3);
+axis(side=2,las=1,cex.axis=.8,mgp=c(3,.4,0),tcl=-.3)
+mtext(side=c(1,2,1),cex=cex.labs,text=c(laglab,valuelab,a.subtitle),line=c(.8,1.1,1.8))
+points(k,aut21,type='o',cex=0.47,pch=1,lwd=.55);
+points(k,aut22,type='o',cex=0.47,pch=1,lwd=.55);
+points(k,aut23,type='o',cex=0.47,pch=1,lwd=.55);
+points(k,aut24,type='o',cex=0.47,pch=1,lwd=.55);
+
+
+plot(k,sun.aut,type='o',xaxt='n',yaxt='n',cex=0.65,pch=16,cex.lab=.75,cex.axis=.75,lwd=2,xlab='',ylab='',ylim=c(-1,1))
+axis(side=1,cex.axis=.8,mgp=c(3,0.15,0),tcl=-.3);
+axis(side=2,las=1,cex.axis=.8,mgp=c(3,.4,0),tcl=-.3)
+mtext(side=c(1,2,1),cex=cex.labs,text=c(laglab,valuelab,b.subtitle),line=c(.8,1.1,1.8))
+points(k,aut81,type='o',cex=0.47,pch=1,lwd=.55);
+points(k,aut82,type='o',cex=0.47,pch=1,lwd=.55);
+points(k,aut83,type='o',cex=0.47,pch=1,lwd=.55);
+points(k,aut84,type='o',cex=0.47,pch=1,lwd=.55);
+
+```
+
+* AR(8) is better and more consistent with the sunspot data
+
+#### Spectral Densities
+
+```{r}
+# Figure 9.11   spectral density estimates for ss data 
+numrows <- 1
+numcols <- 2
+freqlab <- 'Frequency'
+valuelab <- ''
+a.subtitle<-'(a) Spectral estimates for AR(2) realizations'
+b.subtitle<-'(b) Spectral estimates for AR(8) realizations'
+
+cex.labs <- c(.67,.7,.67)
+
+par(mfrow=c(numrows,numcols),mar=c(3.8,2.5,1,1))
+t<-1:100;
+sunspec=parzen.wge(sunspot.classic,plot=FALSE)
+sun.spec=sunspec$pzgram
+
+#
+spec.21<-parzen.wge(s21,plot=FALSE)
+spec21=spec.21$pzgram
+f=spec.21$freq
+spec.22<-parzen.wge(s22,plot=FALSE)
+spec22=spec.22$pzgram
+spec.23<-parzen.wge(s23,plot=FALSE)
+spec23=spec.23$pzgram
+spec.24<-parzen.wge(s24,plot=FALSE)
+spec24=spec.24$pzgram
+#
+spec.81<-parzen.wge(s81,plot=FALSE)
+spec81=spec.81$pzgram
+spec.82<-parzen.wge(s82,plot=FALSE)
+spec82=spec.82$pzgram
+spec.83<-parzen.wge(s83,plot=FALSE)
+spec83=spec.83$pzgram
+spec.84<-parzen.wge(s84,plot=FALSE)
+spec84=spec.84$pzgram
+#
+#
+
+plot(f,sun.spec,type='l',xaxt='n',yaxt='n',cex=0.4,cex.lab=.75,cex.axis=.75,lwd=2,xlab='',ylab='',ylim=c(-25,10))
+axis(side=1,cex.axis=.8,mgp=c(3,0.15,0),tcl=-.3);
+axis(side=2,las=1,cex.axis=.8,mgp=c(3,.4,0),tcl=-.3)
+mtext(side=c(1,2,1),cex=cex.labs,text=c(freqlab,valuelab,a.subtitle),line=c(.8,1.1,1.8))
+points(f,spec21,type='l',cex=0.1,pch=2,lwd=.55);
+points(f,spec22,type='l',cex=0.1,pch=2,lwd=.55);
+points(f,spec23,type='l',cex=0.1,pch=2,lwd=.55);
+points(f,spec24,type='l',cex=0.1,pch=2,lwd=.55);
+
+
+plot(f,sun.spec,type='l',xaxt='n',yaxt='n',cex=0.4,cex.lab=.75,cex.axis=.75,lwd=2,xlab='',ylab='',ylim=c(-25,10))
+axis(side=1,cex.axis=.8,mgp=c(3,0.15,0),tcl=-.3);
+axis(side=2,las=1,cex.axis=.8,mgp=c(3,.4,0),tcl=-.3)
+mtext(side=c(1,2,1),cex=cex.labs,text=c(freqlab,valuelab,b.subtitle),line=c(.8,1.1,1.8))
+points(f,spec81,type='l',cex=0.1,pch=2,lwd=.55);
+points(f,spec82,type='l',cex=0.1,pch=2,lwd=.55);
+points(f,spec83,type='l',cex=0.1,pch=2,lwd=.55);
+points(f,spec84,type='l',cex=0.1,pch=2,lwd=.55);
+
+```
+* Again, AR(8) is better tha the AR(2) as it matches the peak at f = 0 better compared to AR(2)
+
+#### Forecasts
+
+```{r}
+f = fore.arma.wge(sunspot.classic, phi = s2$phi, n.ahead = 50, limits = TRUE)
+f = fore.arma.wge(sunspot.classic, phi = s8$phi, n.ahead = 50, limits = TRUE)
+```
+
+* AR(8) better than AR(2) but both are not realistic
+
+```{r}
+f = fore.arma.wge(sunspot.classic, phi = s2$phi, n.ahead = 50, lastn = TRUE, limits = TRUE)
+f = fore.arma.wge(sunspot.classic, phi = s8$phi, n.ahead = 50, lastn = TRUE, limits = TRUE)
+```
+
+* AR(8) is doing better in the short term, but the further we go, the peaks are predicted at valleys (there is a offset or phse shift) which can be an issue.
+
+### Seasonal Model Fit
+
+```{r}
+factor.wge.season(11)
+```
+
+```{r}
+e = est.ar.wge(sunspot.classic, p = 24, type = 'burg')
+```

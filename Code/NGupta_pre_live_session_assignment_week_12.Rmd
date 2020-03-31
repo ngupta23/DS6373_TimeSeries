@@ -1,0 +1,477 @@
+---
+title: "Live Session Assignment 11"
+author: "Nikhil Gupta"
+date: "`r Sys.time()`"
+output:
+  github_document:
+    toc: yes
+    toc_depth: 6
+  word_document:
+    toc: yes
+    toc_depth: '6'
+  html_document:
+    toc: yes
+    toc_depth: 6
+    toc_float: yes
+always_allow_html: yes
+---
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Setup
+
+```{r}
+library(tswge)
+library(tswgewrapped)
+library(tidyverse)
+library(tseries)
+library(orcutt)
+library(vars)
+library(RColorBrewer)
+```
+
+
+# CA Mortality Read Data
+```{r}
+data = read.csv("../Datasets/la_cmort_study.csv")
+data %>% glimpse()
+data %>%  skimr::skim()
+```
+
+```{r fig.width=10}
+df.m = reshape::melt(data, id.vars = "Week")
+ggplot(df.m) + 
+  facet_wrap(variable ~ ., ncol = 1, scales = 'free_y') + 
+  geom_line(aes(x = Week, y = value, colour = variable))
+
+```
+
+```{r}
+all_data = data %>% dplyr::select(-Week)
+```
+
+# CCF Analysis
+
+```{r}
+lag.max = 10
+```
+
+```{r}
+
+var_interest = 'cmort'
+
+for (name in colnames(all_data)){
+  # By convention, the X2 variable comes first
+  c = ccf(data[name], data[var_interest], lag.max = lag.max)
+  index = which(abs(c$acf[,1,1]) == max(abs(c$acf[,1,1])))
+  max_ccf = c$lag[,1,1][index] 
+  cat(paste("\nFor variable: ", name, " , max cross-correlation is at lag: ", max_ccf, sep = ""))
+}
+
+
+```
+
+* At lag of -1, we have the maximum correlation and it seems to be negative. As temp increases, mortality decreases.
+* Lag of -7 seems to have the maximum correlation to mortality and positive. More the particles, more the mortality.
+
+* We will use lag.max = 10 in VARselect to give it enough room to pick the best model.
+
+
+# Using tswgewrapped
+
+## Multivariate Compare Object
+```{r}
+
+models = list(
+  "VARS AIC Both B" = list(select = "aic", trend_type = "both", lag.max = lag.max, sliding_ase = TRUE),
+  "VARS AIC Trend B" = list(select = "aic", trend_type = "trend", lag.max = lag.max, sliding_ase = TRUE),
+  "VARS AIC Const B" = list(select = "aic", trend_type = "const", lag.max = lag.max, sliding_ase = TRUE),
+  "VARS AIC None B" = list(select = "aic", trend_type = "none", lag.max = lag.max, sliding_ase = TRUE),
+  "VARS BIC Both B" = list(select = "bic", trend_type = "both", lag.max = lag.max, sliding_ase = TRUE),
+  "VARS BIC Trend B" = list(select = "bic", trend_type = "trend", lag.max = lag.max, sliding_ase = TRUE),
+  "VARS BIC Const B" = list(select = "bic", trend_type = "const", lag.max = lag.max, sliding_ase = TRUE),
+  "VARS BIC None B" = list(select = "bic", trend_type = "none", lag.max = lag.max, sliding_ase = TRUE)
+)
+```
+
+```{r}
+n.ahead = 20
+batch_size = 200 
+```
+
+
+```{r}
+mdl_compare = ModelCompareMultivariateVAR$new(data = all_data, mdl_list = models, var_interest = var_interest,
+                                              n.ahead = n.ahead, batch_size = batch_size, verbose = 1)
+```
+
+### AIC BIC Full Data
+```{r}
+mdl_compare$get_xIC() 
+```
+
+### Tabular Metrics
+
+```{r}
+ASEs = mdl_compare$get_tabular_metrics() 
+
+ASEs %>% 
+  group_by(Model) %>% 
+  summarise(ASE_mean = mean(ASE),
+            ASE_median = median(ASE),
+            ASE_sd = sd(ASE),
+            num_batches = n())
+
+```
+
+
+```{r}
+mdl_compare$get_tabular_metrics(ases = FALSE) %>% 
+  na.omit()
+```
+
+### Remove unwanted models
+```{r}
+mdls_to_keep = c("VARS AIC Both B", "VARS AIC None B")
+mdl_compare$keep_models(mdl_names = mdls_to_keep)
+# mdls_to_remove = c("VARS AIC Const B", "VARS AIC Trend B", "VARS BIC Both B", "VARS BIC Const B", "VARS BIC None B", "VARS BIC Trend B")
+# mdl_compare$remove_models(mdl_names = mdls_to_remove)
+```
+
+```{r}
+models = list(
+  "VARS AIC Both A" = list(select = "aic", trend_type = "both", lag.max = lag.max, sliding_ase = FALSE),
+  "VARS AIC None A" = list(select = "aic", trend_type = "none", lag.max = lag.max, sliding_ase = FALSE),
+  "VARS AIC Both B" = list(select = "aic", trend_type = "both", lag.max = lag.max, sliding_ase = TRUE),
+  "VARS AIC None B" = list(select = "aic", trend_type = "none", lag.max = lag.max, sliding_ase = TRUE)
+)
+
+```
+
+
+```{r}
+mdl_compare = ModelCompareMultivariateVAR$new(data = all_data, mdl_list = models, var_interest = var_interest,
+                                              n.ahead = n.ahead, batch_size = batch_size, verbose = 0)
+```
+
+```{r}
+ASEs = mdl_compare$get_tabular_metrics() 
+
+ASEs %>% 
+  group_by(Model) %>% 
+  summarise(ASE_mean = mean(ASE),
+            ASE_median = median(ASE),
+            ASE_sd = sd(ASE),
+            num_batches = n())
+
+```
+
+### Simple Forecasts
+```{r fig.width=10}
+mdl_compare$plot_simple_forecasts(lastn = TRUE, limits = TRUE)
+mdl_compare$plot_simple_forecasts(lastn = FALSE, limits = TRUE)
+```
+
+
+### Batch Forecasts
+```{r fig.width=10}
+mdl_compare$plot_batch_forecasts(only_sliding = FALSE)
+```
+
+### Batch ASEs
+```{r fig.width=10}
+mdl_compare$plot_batch_ases(only_sliding = FALSE)
+```
+
+### ASE Histograms
+```{r}
+mdl_compare$plot_histogram_ases()  # Same function as univariate
+```
+
+
+### Statistical Compare
+```{r}
+mdl_compare$statistical_compare() 
+```
+
+
+# For Pre-live Manual Method
+```{r}
+plot(data)
+```
+
+* There seems to be some weekly trend in the data (downward)
+
+## Train Test Split
+
+
+```{r}
+n = nrow(data)
+train_data = all_data %>% dplyr::filter(row_number() <= (n - n.ahead))
+test_data = all_data %>% dplyr::filter(row_number() > (n - n.ahead))
+```
+
+
+## VARselect
+```{r}
+# VARselect will select the best K for this VAR model
+# Looks at the cross correlation structure (ccf) to figure this out 
+vselect = VARselect(all_data, lag.max = lag.max, type = "both", season = NULL, exogen = NULL)
+vselect # Gives AIC values for various K values
+
+k = vselect$selection[["AIC(n)"]]  # BIC = SC(n)
+k
+```
+
+AIC picks a VAR(10) model
+
+## VAR Model
+
+```{r}
+lsfit = VAR(train_data, p=k, type="both")
+stats::AIC(lsfit)
+a = summary(lsfit)
+#a
+a$varresult[var_interest]  # $coefficients[,"Pr(>|t|)"]
+```
+
+## Predictions
+
+```{r}
+preds = stats::predict(lsfit, n.ahead=n.ahead)
+
+results = preds$fcst[[var_interest]] %>% 
+  dplyr::as_tibble() %>% 
+  dplyr::mutate(Week = seq(n-n.ahead+1,n,1)) 
+
+results
+
+```
+
+### ASE
+
+```{r}
+ASE_data = data %>% 
+  dplyr::full_join(results, by = "Week") %>% 
+  na.omit()
+
+ASE_data
+```
+
+```{r}
+ASE = mean((ASE_data$cmort - ASE_data$fcst)^2, na.rm = TRUE)
+ASE
+```
+
+
+### Plots
+
+```{r}
+results = results %>% 
+  dplyr::mutate(cmort = fcst) %>% 
+  dplyr::mutate(Model = 'VAR Model') %>% 
+  dplyr::select(Model, Week, cmort)
+
+combined_data = data %>% 
+  mutate(Model = 'Realization') %>% 
+  dplyr::select(Model, Week, cmort ) %>% 
+  bind_rows(results) %>% 
+  mutate(Model = as.factor(Model))
+
+combined_data
+```
+
+
+```{r fig.width=10}
+p = ggplot2::ggplot() + 
+  ggplot2::geom_line(data = combined_data, mapping = ggplot2::aes(x = Week, y = cmort, color = Model))
+
+print(p)
+
+plot(seq(1,n,1), data$cmort, type = "b")
+points(seq(n-n.ahead+1,n,1), preds$fcst$cmort[,'fcst'], type = "b", pch = 15)
+```
+
+
+```{r fig.width=10}
+fanchart(preds, colors = brewer.pal(n = 8, name = "Blues")) # Change color pallet to make distinguishable. 
+```
+
+
+# Sales Read Data
+```{r}
+data = read.csv("../Datasets/businesssales.csv")
+data %>% glimpse()
+data %>%  skimr::skim()
+```
+
+```{r fig.width=10}
+df.m = reshape::melt(data, id.vars = "X")
+ggplot(df.m) + 
+  facet_wrap(variable ~ ., ncol = 1, scales = 'free_y') + 
+  geom_line(aes(x = X, y = value, colour = variable))
+
+```
+
+```{r}
+all_data = data %>% dplyr::select(-X)
+```
+
+## CCF Analysis
+
+```{r}
+lag.max = 10
+```
+
+```{r}
+
+var_interest = 'sales'
+
+for (name in colnames(all_data)){
+  # By convention, the X2 variable comes first
+  c = ccf(data[name], data[var_interest], lag.max = lag.max)
+  index = which(abs(c$acf[,1,1]) == max(abs(c$acf[,1,1])))
+  max_ccf = c$lag[,1,1][index] 
+  cat(paste("\nFor variable: ", name, " , max cross-correlation is at lag: ", max_ccf, sep = ""))
+}
+
+
+```
+
+
+## Multivariate Compare Object
+```{r}
+
+lag.max = 7
+
+models = list(
+  "VARS AIC Both A" = list(select = "aic", trend_type = "both", lag.max = lag.max, sliding_ase = FALSE),
+  "VARS AIC Trend A" = list(select = "aic", trend_type = "trend", lag.max = lag.max, sliding_ase = FALSE),
+  "VARS AIC Const A" = list(select = "aic", trend_type = "const", lag.max = lag.max, sliding_ase = FALSE),
+  "VARS AIC None A" = list(select = "aic", trend_type = "none", lag.max = lag.max, sliding_ase = FALSE),
+  "VARS BIC Both A" = list(select = "bic", trend_type = "both", lag.max = lag.max, sliding_ase = FALSE),
+  "VARS BIC Trend A" = list(select = "bic", trend_type = "trend", lag.max = lag.max, sliding_ase = FALSE),
+  "VARS BIC Const A" = list(select = "bic", trend_type = "const", lag.max = lag.max, sliding_ase = FALSE),
+  "VARS BIC None A" = list(select = "bic", trend_type = "none", lag.max = lag.max, sliding_ase = FALSE)
+)
+```
+
+```{r}
+n.ahead = 5
+```
+
+
+```{r}
+mdl_compare = ModelCompareMultivariateVAR$new(data = all_data, mdl_list = models, var_interest = var_interest,
+                                              n.ahead = n.ahead, batch_size = batch_size, verbose = 1)
+```
+
+### AIC BIC Full Data
+```{r}
+mdl_compare$get_xIC()
+mdl_compare$get_xIC(sort_by = "BIC")
+```
+
+### Tabular Metrics
+
+```{r}
+ASEs = mdl_compare$get_tabular_metrics() 
+
+ASEs %>% 
+  group_by(Model) %>% 
+  summarise(ASE_mean = mean(ASE),
+            ASE_median = median(ASE),
+            ASE_sd = sd(ASE),
+            num_batches = n()) %>% 
+  dplyr::arrange((ASE_mean))
+
+```
+
+* Using AIC, "VARS AIC Const A" gets selected
+* Using BIC, "VARS BIC Const A" gets selected
+* Using ASE values also, these 2 models do the best
+* We will keep these 2 models
+
+### Keep limited models
+```{r}
+mdls_to_keep = c("VARS AIC Const A", "VARS BIC Const A")
+mdl_compare$keep_models(mdl_names = mdls_to_keep)
+```
+
+### Comparing Forecasts
+```{r}
+forecasts = mdl_compare$get_tabular_metrics(ases = FALSE) 
+
+forecasts %>% 
+  na.omit()
+```
+
+```{r}
+n = nrow(data)
+test_data = data %>% dplyr::filter(row_number() > (n - n.ahead))
+test_data
+```
+
+## MLR with correlated errors
+
+```{r}
+data2 = data %>% 
+  mutate(ad_tv1 = dplyr::lag(ad_tv, 1)) %>% 
+  mutate(ad_online1 = dplyr::lag(ad_online, 1)) %>% 
+  mutate(discount3 = dplyr::lag(discount, 3)) 
+
+data2
+```
+
+### Train Test Split
+```{r}
+n = nrow(data2)
+train_data = data2 %>% dplyr::filter(row_number() <= (n - n.ahead))
+test_data = data2 %>% dplyr::filter(row_number() > (n - n.ahead))
+```
+
+### Fit the model
+```{r}
+# Includes trend + original variables + lagged variables
+ksfit = lm(sales ~ ., data = train_data)
+aic_fit = aic.wge(ksfit$residuals,p=0:8, q=0)  
+aic_fit
+```
+
+```{r}
+fit = arima(train_data$sales, order=c(aic_fit$p,0,0), xreg=train_data %>% dplyr::select(-sales))
+fit
+```
+
+### Evaluate Residuals
+```{r}
+tswgewrapped::evaluate_residuals(fit$residuals %>% na.omit())
+```
+
+### Compare Forecasts
+```{r}
+test_data2 = test_data %>% 
+  dplyr::select(-sales)
+
+test_data2
+```
+
+```{r}
+preds = stats::predict(fit, newxreg = test_data2)
+preds
+test_data$sales
+```
+
+```{r}
+ASE = mean((preds$pred - test_data$sales)^2)
+ASE
+```
+
+
+```{r}
+
+
+```

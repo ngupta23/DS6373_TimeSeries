@@ -1,0 +1,297 @@
+---
+title: "Live Session Assignment 11"
+author: "Nikhil Gupta"
+date: "`r Sys.time()`"
+output:
+  word_document:
+    toc: yes
+    toc_depth: '6'
+  html_document:
+    toc: yes
+    toc_depth: 6
+    toc_float: yes
+always_allow_html: yes
+---
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Setup
+
+```{r}
+library(tswge)
+library(tidyverse)
+library(tswgewrapped)
+library(orcutt)
+```
+
+
+# For pre-live
+
+## Setup
+
+```{r}
+sunspot = read.csv("../Datasets/SN_y_tot_V2.0.csv", sep = ";", header = FALSE)
+head(sunspot)
+```
+
+```{r}
+x = sunspot$V2
+x %>% glimpse()
+```
+
+## 1. Plot Data
+```{r}
+px = plotts.wge(x)
+```
+
+## 2. Check Stationarity
+```{r}
+check_stationarity(x)
+```
+
+* Condition 1: There seems to be some seasonality in the data so the mean does depend on time. However, this could also be a result of a ARMA process with complex AR roots. However since the cyclical behavior is sustained, it is more than likely not coming from a stationary ARMA process. Condition 1 seems to be violated.
+* Condition 2: We only have 1 realization so we can not comment confidently about whether the variance changes with time. However if we overlay the data from various seasons, we can see that the variance is roughly the same over time. Hence this conditions does not seem to be violated.
+* Condition 3: The 1st half and second half ACF look roughly the same although the peaks in the second half are stronger. Overall though there is not much evidence of this condition being violated.
+* **SUMMARY:** Given that condition 1 is likely violated, this data does not seem to be stationary
+
+
+## 3. Model ID
+```{r}
+aic5.wge(x)
+```
+
+
+```{r}
+# aicbic(x, p = 0:5, q = 0:2, merge = TRUE, sort_by = 'bic', silent = TRUE)
+aicbic(x, merge = TRUE, sort_by = 'bic', silent = TRUE)
+```
+
+* Looks like ARMA(3, 4) is the top model from an AIC persepective and one of the top models from a BIC perspective.
+* We will pick this one for parameter estimation
+
+## 4. Parameter Estimation
+```{r}
+e.3.4 = est.arma.wge(x, p = 3, q = 4)
+factor.wge(e.3.4$theta)
+e.3.4$avar
+mean(x)
+```
+
+## 6. Fit Seasonal Model
+
+* From ACF, we see a seasonality of 11. Lets confirm this
+```{r}
+factor.wge.season(11)
+```
+
+```{r}
+overfit(x)
+```
+
+* One of the factors is close to (1-B)^2 with an Abs Reciprocal close to 1 (0.95)
+* One of the factors is close to 1 - 1.6825B + 1B2 (sys freq = 0.0909) with abs Reciprocal of 0.9834
+* There is also a factor close to the one with system frequency of 0.1818 (Abs Reciprocal = 0.96)
+* There is also a factor close to the one with system frequence of 0.2727 (Abs Reciprocal = 0.91)
+* There is also a factor close to the one with system frequence of 0.3636 (Abs Reciprocal = 0.925)
+* There is also a factor close to the one with system frequence of 0.4545 (Abs Reciprocal = 0.914)
+
+This matches up fairly well with s = 11
+
+### Difference to remove seasonality
+
+```{r}
+x.d11 = artrans.wge(x, phi.tr = c(rep(0,10),1))
+px = plotts.sample.wge(x.d11)
+```
+
+* Looks fairly stationary with some autoregressive properties
+
+```{r}
+aicbic(x.d11, p = 0:12, merge = TRUE, silent = TRUE)
+```
+
+Looks like there is still some seasonality left in the data so we are getting ARMA(11,3) as the Model ID
+
+```{r}
+e.11.3 = est.arma.wge(x.d11, p = 11, q = 3)
+factor.wge(e.11.3$theta)
+e.11.3$avar
+mean(x)
+```
+
+### White Noise Eval
+```{r}
+data = white_noise_eval(e.3.4$res, p = 3, q = 4)
+data$pval %>% pluck()
+```
+
+```{r}
+data = white_noise_eval(e.11.3$res, p = 11, q = 3)
+data$pval %>% pluck()
+```
+
+### Model  Comparions
+```{r}
+models = list("ARMA(3,4) VerA" = list(phi = e.3.4$phi, theta = e.3.4$theta, vara = e.3.4$avar, sliding_ase = FALSE),
+              "ARIMA(11,0,3) s = 11 VerA" = list(phi = e.11.3$phi, theta = e.11.3$theta, d = 0, s = 11, vara = e.11.3$avar, sliding_ase = FALSE)
+              # "ARMA(3,4) VerB" = list(phi = e.3.4$phi, theta = e.3.4$theta, vara = e.3.4$avar, sliding_ase = TRUE),
+              #"ARIMA(11,0,3) s = 11 VerB" = list(phi = e.11.3$phi, theta = e.11.3$theta, d = 0, s = 11, vara = e.11.3$avar, sliding_ase = TRUE)
+              )
+
+n.ahead = 15
+batch_size = 60
+```
+
+
+```{r}
+mdl_compare = tswgewrapped::ModelCompareUnivariate$new(x = x, mdl_list = models,
+                                                       n.ahead = n.ahead, batch_size = batch_size)
+```
+
+### Compare Multiple Realizations
+
+```{r fig.height=10, fig.width=10, message=FALSE, warning=FALSE}
+mdl_compare$plot_multiple_realizations(n.realizations = 4, seed = 100, plot = "realization", scales = 'free_y')
+```
+
+```{r fig.height=6, message=FALSE, warning=FALSE}
+mdl_compare$plot_multiple_realizations(n.realizations = 4, seed = 100, plot = c("acf", "spectrum"), scales = 'fixed')
+```
+
+### Compare Simple Forecasts
+```{r fig.height=4, fig.width=12}
+mdl_compare$plot_simple_forecasts()
+```
+
+### ASE values across Batches
+```{r message=FALSE, warning=FALSE}
+ASEs = mdl_compare$get_tabular_metrics(ases = TRUE)
+print(ASEs)
+```
+
+```{r}
+ASEs %>% 
+  group_by(Model) %>% 
+  summarise(ASE_mean = mean(ASE),
+            ASE_median = median(ASE),
+            ASE_sd = sd(ASE),
+            num_batches = n())
+```
+
+* Based on this information, it looks like the ARIMA model may be overfitting the data slightly. I would pick the ARMA model in this case. We initially diagnosed this as a non stationay process so the ARMA model may not be a good fit for long term predictions since it will converge to the mean. But for short term predictions (over say 1-2 cycles), this may stil be OK to use. 
+
+```{r}
+f = fore.arma.wge(x, phi = e.3.4$phi, theta = e.3.4$theta, n.ahead = 10)
+```
+
+
+# Accuspike
+
+```{r}
+data = read.csv("../Datasets/accuspike.csv")
+data %>%  glimpse()
+```
+
+```{r}
+x = data$Active.Users
+```
+
+```{r}
+px = plotts.sample.wge(x)
+```
+
+
+```{r}
+check_stationarity(x)
+```
+* Seems like a stationary dataset, though there is spikes at lags of muultiples of 7 so could have a seasonality of 7 as well. ACF also shows spike at 0.14 corresponding to s = 7.
+
+
+
+## Overfit tables
+```{r}
+factor.wge.season(7)
+```
+
+```{r}
+overfit(x, p = 12)
+```
+
+* Only the factor 0.1429 is predominant. So we can model with a stationary process.
+
+
+##
+```{r}
+aicbic(x, p = 0:15, silent = TRUE, merge = TRUE)
+```
+
+* We will pick ARMA(12, 0)
+```{r}
+est = est.arma.wge(x, p = 12)
+est$avar
+mean(x)
+```
+
+```{r}
+data = white_noise_eval(est$res, p = 12)
+data$pval %>% pluck()
+```
+
+* Fairly White Noise so we should be good to go
+
+### Model  Comparions
+```{r}
+models = list("ARMA(12,0)" = list(phi = est$phi, vara = est$avar, sliding_ase = TRUE)
+              )
+
+n.ahead = 14
+batch_size = 70
+```
+
+
+```{r}
+mdl_compare = tswgewrapped::ModelCompareUnivariate$new(x = x, mdl_list = models,
+                                                       n.ahead = n.ahead, batch_size = batch_size)
+```
+
+### Compare Multiple Realizations
+
+```{r fig.height=10, fig.width=10, message=FALSE, warning=FALSE}
+mdl_compare$plot_multiple_realizations(n.realizations = 4, seed = 100, plot = "realization", scales = 'fixed')
+```
+
+```{r fig.height=6, message=FALSE, warning=FALSE}
+mdl_compare$plot_multiple_realizations(n.realizations = 4, seed = 100, plot = c("acf", "spectrum"), scales = 'fixed')
+```
+
+### Compare Simple Forecasts
+```{r fig.height=4, fig.width=12}
+mdl_compare$plot_simple_forecasts()
+```
+
+### ASE values across Batches
+```{r message=FALSE, warning=FALSE}
+ASEs = mdl_compare$get_tabular_metrics(ases = TRUE)
+print(ASEs)
+```
+
+```{r}
+ASEs %>% 
+  group_by(Model) %>% 
+  summarise(ASE_mean = mean(ASE),
+            ASE_median = median(ASE),
+            ASE_sd = sd(ASE),
+            num_batches = n())
+```
+
+### Forecasts across Batches
+
+```{r, warning=FALSE, fig.height=4, fig.width=10}
+mdl_compare$plot_forecasts(only_sliding = TRUE)
+```
+
+
+

@@ -1,0 +1,255 @@
+---
+title: "Multivariate Compare"
+author: "Nikhil Gupta"
+date: "`r Sys.time()`"
+output:
+  word_document:
+    toc: yes
+    toc_depth: '6'
+  html_document:
+    toc: yes
+    toc_depth: 6
+    toc_float: yes
+always_allow_html: yes
+---
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Setup
+
+```{r}
+library(tswge)
+library(tswgewrapped)
+library(tidyverse)
+library(tseries)
+library(orcutt)
+library(vars)
+library(RColorBrewer)
+```
+
+```{r}
+data = read.csv("../Datasets/la_cmort_study.csv")
+data %>% glimpse()
+data %>%  skimr::skim()
+```
+
+## CCF Analysis
+
+```{r}
+lag.max = 10
+```
+
+
+```{r}
+# By convention, the X2 variable comes first
+c = ccf(data$temp, data$cmort, lag.max = lag.max)
+index = which(abs(c$acf[,1,1]) == max(abs(c$acf[,1,1])))
+max_ccf = c$lag[,1,1][index] 
+max_ccf
+```
+
+* At lag of -1, we have the maximum correlation and it seems to be negative. As temp increases, mortality decreases.
+
+```{r}
+# By convention, the X2 variable comes first
+c = ccf(data$part, data$cmort, lag.max = lag.max)
+index = which(abs(c$acf[,1,1]) == max(abs(c$acf[,1,1])))
+max_ccf = c$lag[,1,1][index] 
+max_ccf
+```
+
+* Lag of 7 seems to have the maximum correlation to mortality and positive. More the particles, more the mortality.
+
+* We will use lag.max = 10 in VARselect to give it enough room to pick the best model.
+
+## Multivariate Compate Object
+```{r}
+models = list("VARS AIC No Trend" = list(type = "VAR", select = "aic", trend_type = "none", lag.max = lag.max),
+              "VARS AIC Trend"    = list(type = "VAR", select = "aic", trend_type = "trend", lag.max = lag.max),
+              "VARS AIC Const + Trend" = list(type = "VAR", select = "aic", trend_type = "both", lag.max = lag.max),
+              "VARS BIC No Trend" = list(type = "VAR", select = "bic", trend_type = "none", lag.max = lag.max),
+              "VARS BIC Trend"    = list(type = "VAR", select = "bic", trend_type = "trend", lag.max = lag.max),
+              "VARS BIC Const + Trend" = list(type = "VAR", select = "bic", trend_type = "both", lag.max = lag.max)
+               )
+```
+
+```{r}
+n.ahead = 20
+var_interest = 'cmort'
+```
+
+```{r}
+all_data = data %>% dplyr::select(-Week)
+```
+
+```{r}
+mdl_compare = ModelCompareMultivariate$new(data = all_data, mdl_list = models, var_interest = 'cmort',
+                                           n.ahead = 20, batch_size = 52)
+```
+
+### AIC BIC Full Data
+```{r}
+mdl_compare$get_xIC() 
+```
+
+### Tabular Metrics
+```{r}
+mdl_compare$get_tabular_metrics()
+mdl_compare$get_tabular_metrics(ases = FALSE) %>% 
+  na.omit()
+```
+
+### Simple Forecasts
+```{r fig.width=10}
+mdl_compare$plot_simple_forecasts(lastn = TRUE, limits = FALSE)
+mdl_compare$plot_simple_forecasts(lastn = TRUE, limits = TRUE)
+mdl_compare$plot_simple_forecasts(lastn = FALSE, limits = FALSE)
+mdl_compare$plot_simple_forecasts(lastn = FALSE, limits = TRUE)
+```
+
+
+### Batch Forecasts
+```{r fig.width=10}
+mdl_compare$plot_batch_forecasts(only_sliding = FALSE)
+```
+
+### Batch ASEs
+```{r}
+mdl_compare$plot_batch_ases(only_sliding = FALSE)
+```
+
+### ASE Histograms
+```{r}
+mdl_compare$plot_histogram_ases()  # Same function as univariate
+```
+
+
+### Statistical Compare
+```{r}
+mdl_compare$statistical_compare() 
+```
+
+
+# For pre-live
+
+## Setup
+
+
+
+```{r}
+plot(data)
+```
+
+* There seems to be some weekly trend in the data (downward)
+
+
+
+## Train Test Split
+
+```{r}
+tail(data)
+```
+
+
+```{r}
+n = nrow(data)
+train_data = all_data %>% dplyr::filter(row_number() <= (n - n.ahead))
+test_data = all_data %>%  dplyr::filter(row_number() > (n - n.ahead))
+```
+
+
+## VARselect
+```{r}
+# VARselect will select the best K for this VAR model
+# Looks at the cross correlation structure (ccf) to figure this out 
+vselect = VARselect(all_data, lag.max = lag.max, type = "both", season = NULL, exogen = NULL)
+vselect # Gives AIC values for various K values
+
+k = vselect$selection[["AIC(n)"]]  # BIC = SC(n)
+k
+```
+
+AIC picks a VAR(10) model
+
+## VAR Model
+
+```{r}
+lsfit = VAR(train_data, p=k, type="both")
+stats::AIC(lsfit)
+a = summary(lsfit)
+#a
+a$varresult[var_interest]  # $coefficients[,"Pr(>|t|)"]
+```
+
+## Predictions
+
+```{r}
+preds = predict(lsfit, n.ahead=20)
+
+results = preds$fcst[[var_interest]] %>% 
+  as.tibble() %>% 
+  mutate(Week = seq(n-n.ahead+1,n,1)) 
+
+results
+
+```
+
+### ASE
+
+```{r}
+ASE_data = data %>% 
+  dplyr::full_join(results, by = "Week") %>% 
+  na.omit()
+
+ASE_data
+```
+
+```{r}
+ASE = mean((ASE_data$cmort - ASE_data$fcst)^2, na.rm = TRUE)
+ASE
+```
+
+
+### Plots
+
+```{r}
+results = results %>% 
+  dplyr::mutate(cmort = fcst) %>% 
+  dplyr::mutate(Model = 'VAR Model') %>% 
+  dplyr::select(Model, Week, cmort)
+
+combined_data = data %>% 
+  mutate(Model = 'Realization') %>% 
+  dplyr::select(Model, Week, cmort ) %>% 
+  bind_rows(results) %>% 
+  mutate(Model = as.factor(Model))
+
+combined_data
+```
+
+
+```{r fig.width=10}
+p = ggplot2::ggplot() + 
+  ggplot2::geom_line(data = combined_data, mapping = ggplot2::aes(x = Week, y = cmort, color = Model))
+
+print(p)
+
+plot(seq(1,n,1), data$cmort, type = "b")
+points(seq(n-n.ahead+1,n,1), preds$fcst$cmort[,'fcst'], type = "b", pch = 15)
+```
+
+
+```{r fig.width=10}
+fanchart(preds, colors = brewer.pal(n = 8, name = "Blues")) # Change color pallet to make distinguishable. 
+```
+
+
+
+
+```{r}
+
+```
+
