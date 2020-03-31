@@ -1,0 +1,501 @@
+---
+title: "Homework 9"
+author: "Nikhil Gupta"
+date: "`r Sys.time()`"
+output:
+  github_document:
+    toc: yes
+    toc_depth: '6'
+  word_document:
+    toc: yes
+    toc_depth: '6'
+  html_document:
+    toc: yes
+    toc_depth: 6
+    toc_float: yes
+always_allow_html: yes
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Setup
+
+```{r}
+library(tswge)
+library(tidyverse)
+library(tswgewrapped)
+```
+
+
+# Problem 9.1
+
+## Model 1
+
+```{r}
+phi = c(1.5, -1.21, 0.455)
+theta = 0
+n = 200
+mean = 50
+
+factor.wge(phi = phi)
+
+xa = mean + gen.arma.wge(n = n, phi = phi, plot = FALSE, sn = 101)    
+# px = plotts.sample.wge(xa)
+```
+
+```{r}
+e = est.arma.wge(xa, p = length(phi))
+e$avar
+mean(xa)
+```
+
+### a
+
+```{r}
+models = list("Model 1" = list(phi = e$phi, theta = e$theta, vara = e$avar, res = e$res, sliding_ase = FALSE))
+
+n.ahead = 20
+
+mdl_compare = tswgewrapped::ModelCompareUnivariate$new(x = xa, mdl_list = models, n.ahead = n.ahead)
+```
+
+```{r}
+mdl_compare$evaluate_residuals()
+```
+
+* Data is consistent with white noise
+
+### b
+```{r}
+pt = plotts.true.wge(phi = e$phi, theta = e$theta)
+px = plotts.sample.wge(xa)
+```
+
+### c
+```{r}
+mdl_compare$plot_simple_forecasts(lastn = TRUE, limits = TRUE)
+```
+
+* Model forecasts settle down pretty quickly to mean so they may not do such a good job at long term forecasting
+
+### d
+
+```{r fig.height=8, message=FALSE, warning=FALSE}
+mdl_compare$plot_multiple_realizations(n.realizations = 4, seed = 100, plot = "realization", scales = 'free_y')
+```
+
+```{r message=FALSE, warning=FALSE}
+mdl_compare$plot_multiple_realizations(n.realizations = 4, seed = 100, plot = c("acf", "spectrum"), scales = 'fixed')
+```
+
+Very much similar to original realization
+
+## Model 2
+```{r}
+phi = c(1.6, -1.7, 1.28, -0.72)
+n = 200
+mean = 200
+
+factor.wge(phi = phi)
+
+xb = mean + gen.arma.wge(n = n, phi = phi, plot = FALSE, sn = 101)    
+```
+
+
+```{r}
+e = est.arma.wge(xb, p = length(phi))
+e$avar
+mean(xb)
+```
+
+### a
+
+```{r}
+models = list("Model 2" = list(phi = e$phi, theta = e$theta, vara = e$avar, res = e$res, sliding_ase = FALSE))
+n.ahead = 20
+
+mdl_compare = tswgewrapped::ModelCompareUnivariate$new(x = xb, mdl_list = models, n.ahead = n.ahead)
+```
+
+```{r}
+mdl_compare$evaluate_residuals()
+```
+
+* Data is consistent with white noise
+
+### b
+```{r}
+pt = plotts.true.wge(phi = e$phi, theta = e$theta)
+px = plotts.sample.wge(xb)
+```
+
+### c
+```{r}
+mdl_compare$plot_simple_forecasts(lastn = TRUE, limits = TRUE)
+```
+
+* Model forecasts do a pretty good job of forecasting last 20 values
+
+### d
+
+```{r fig.height=8, message=FALSE, warning=FALSE}
+mdl_compare$plot_multiple_realizations(n.realizations = 4, seed = 100, plot = "realization", scales = 'free_y')
+```
+
+```{r message=FALSE, warning=FALSE}
+mdl_compare$plot_multiple_realizations(n.realizations = 4, seed = 100, plot = c("acf", "spectrum"), scales = 'fixed')
+```
+
+Very much similar to original realization
+
+## Model 3
+```{r}
+phi = c(1, -1.7, 0.8, -0.72)
+theta = 0.9
+n = 200
+mean = -10
+
+factor.wge(phi = phi)
+
+xc = mean + gen.arma.wge(n = n, phi = phi, theta = theta, plot = FALSE, sn = 101)    
+```
+
+
+```{r}
+e = est.arma.wge(xc, p = length(phi), q = length(theta))
+factor.wge(e$theta)
+e$avar
+mean(xa)
+```
+
+### a
+
+```{r}
+models = list("Model 3" = list(phi = e$phi, theta = e$theta, vara = e$avar, res = e$res, sliding_ase = FALSE))
+n.ahead = 20
+
+mdl_compare = tswgewrapped::ModelCompareUnivariate$new(x = xc, mdl_list = models, n.ahead = n.ahead)
+```
+
+```{r}
+mdl_compare$evaluate_residuals()
+```
+
+* Data is consistent with white noise
+
+### b
+```{r}
+pt = plotts.true.wge(phi = e$phi, theta = e$theta)
+px = plotts.sample.wge(xc)
+```
+
+### c
+```{r}
+mdl_compare$plot_simple_forecasts(lastn = TRUE, limits = TRUE)
+```
+
+* Model forecasts settle down pretty quickly to mean so they may not do such a good job at long term forecasting
+
+### d
+
+```{r fig.height=8,  message=FALSE, warning=FALSE}
+mdl_compare$plot_multiple_realizations(n.realizations = 4, seed = 100, plot = "realization", scales = 'free_y')
+```
+
+```{r message=FALSE, warning=FALSE}
+mdl_compare$plot_multiple_realizations(n.realizations = 4, seed = 100, plot = c("acf", "spectrum"), scales = 'fixed')
+```
+
+Very much similar to original realization
+
+# Problem 9.2
+```{r}
+data(wtcrude)
+x = wtcrude
+```
+
+```{r}
+px = plotts.sample.wge(x)
+```
+
+## wtcrude
+
+* From last week, we picked ARMA(7,2)
+```{r}
+e = est.arma.wge(x, p = 7, q = 2)
+
+factor.wge(e$theta)
+e$avar
+mean(x)
+```
+
+### a
+
+```{r}
+models = list("Model 1" = list(phi = e$phi, theta = e$theta, vara = e$avar, res = e$res, sliding_ase = FALSE))
+n.ahead = 20
+
+mdl_compare = tswgewrapped::ModelCompareUnivariate$new(x = x, mdl_list = models, n.ahead = n.ahead)
+```
+
+```{r}
+mdl_compare$evaluate_residuals()
+```
+
+* Data is consistent with white noise
+
+### b
+```{r}
+pt = plotts.true.wge(phi = e$phi)  # Solution forgot the theta term
+pt = plotts.true.wge(phi = e$phi, theta = e$theta)
+px = plotts.sample.wge(x)
+```
+
+### c
+```{r}
+mdl_compare$plot_simple_forecasts(lastn = TRUE, limits = TRUE)
+f = fore.arma.wge(x, phi = e$phi, theta = e$theta, n.ahead = 10, lastn = TRUE)
+```
+
+* Model forecasts settle down pretty quickly to mean so they may not do such a good job at long term forecasting
+
+### d
+
+```{r fig.height=8, message=FALSE, warning=FALSE}
+mdl_compare$plot_multiple_realizations(n.realizations = 4, seed = 100, plot = "realization", scales = 'free_y')
+```
+
+```{r message=FALSE, warning=FALSE}
+mdl_compare$plot_multiple_realizations(n.realizations = 4, seed = 100, plot = c("acf", "spectrum"), scales = 'fixed')
+```
+
+* Some realizations do a good job of capturing the wandering behavior but some do not.
+
+## eco.mort
+
+```{r}
+data("eco.mort30")
+x = eco.mort30
+```
+
+```{r}
+px = plotts.sample.wge(x)
+```
+
+* Last week we modeled this as an ARMA(6,2)
+```{r}
+e = est.arma.wge(x, p = 6, q = 2)
+
+factor.wge(e$theta)
+e$avar
+mean(x)
+```
+
+### a
+
+```{r}
+models = list("Model 1" = list(phi = e$phi, theta = e$theta, vara = e$avar, res = e$res, sliding_ase = FALSE))
+n.ahead = 20
+
+mdl_compare = tswgewrapped::ModelCompareUnivariate$new(x = x, mdl_list = models, n.ahead = n.ahead)
+```
+
+```{r}
+mdl_compare$evaluate_residuals()
+```
+
+
+* Data is consistent with white noise
+
+### b
+```{r}
+pt = plotts.true.wge(phi = e$phi)  # Solution forgot the theta term
+pt = plotts.true.wge(phi = e$phi, theta = e$theta)
+px = plotts.sample.wge(x)
+```
+* These are similar
+
+### c
+```{r}
+mdl_compare$plot_simple_forecasts(lastn = TRUE, limits = TRUE)
+f = fore.arma.wge(x, phi = e$phi, theta = e$theta, n.ahead = 10, lastn = TRUE)
+```
+
+* Model forecasts settle down pretty quickly to mean so they may not do such a good job at long term forecasting
+
+### d
+
+
+```{r fig.height=8, message=FALSE, warning=FALSE}
+mdl_compare$plot_multiple_realizations(n.realizations = 4, seed = 100, plot = "realization", scales = 'free_y')
+```
+
+```{r message=FALSE, warning=FALSE}
+mdl_compare$plot_multiple_realizations(n.realizations = 4, seed = 100, plot = c("acf", "spectrum"), scales = 'fixed')
+```
+
+
+## hadley
+
+```{r}
+data("hadley")
+x = hadley
+```
+
+```{r}
+px = plotts.sample.wge(x)
+```
+
+* Last week we modeled this as an ARMA(4,2)
+```{r}
+e = est.arma.wge(x, p = 4, q = 2)
+
+factor.wge(e$theta)
+e$avar
+mean(x)
+```
+
+### a
+
+```{r}
+models = list("Model 1" = list(phi = e$phi, theta = e$theta, vara = e$avar, res = e$res, sliding_ase = FALSE))
+n.ahead = 20
+
+mdl_compare = tswgewrapped::ModelCompareUnivariate$new(x = x, mdl_list = models, n.ahead = n.ahead)
+```
+
+```{r}
+mdl_compare$evaluate_residuals()
+```
+
+* Data is consistent with white noise
+
+### b
+```{r}
+pt = plotts.true.wge(phi = e$phi, theta = e$theta)
+px = plotts.sample.wge(x)
+```
+* These are similar
+
+### c
+```{r}
+mdl_compare$plot_simple_forecasts(lastn = TRUE, limits = TRUE)
+f = fore.arma.wge(x, phi = e$phi, theta = e$theta, n.ahead = 10, lastn = TRUE)
+```
+
+* Model forecasts settle down pretty quickly to mean so they may not do such a good job at long term forecasting
+
+### d
+
+
+```{r fig.height=8, message=FALSE, warning=FALSE}
+mdl_compare$plot_multiple_realizations(n.realizations = 4, seed = 100, plot = "realization", scales = 'free_y')
+```
+
+```{r message=FALSE, warning=FALSE}
+mdl_compare$plot_multiple_realizations(n.realizations = 4, seed = 100, plot = c("acf", "spectrum"), scales = 'fixed')
+```
+
+* The sample autocorrelations tend to damped much more quickly than the actual realization so maybe a non-stationary model may be appropriate here.
+
+# Problem 9.3
+
+```{r}
+phi = c(0.8)
+d = 0
+theta = 0
+s = 6
+mean = 25
+n = 200
+
+x = gen.aruma.wge(n = n, phi = phi, theta = theta, d = d, s = s, plot = FALSE, sn = 101)
+```
+
+```{r}
+px = plotts.sample.wge(x)
+```
+
+### Overfit
+```{r} 
+e.burg = est.ar.wge(x, p = 10, type = 'burg')
+```
+
+```{r}
+factor.wge.season(6)
+```
+
+* Yes, s = 6 is present in the overfit table
+
+### Remove s = 6 seasonality
+```{r}
+x.d6 = artrans.wge(x, phi.tr = c(rep(0,5),1))
+```
+
+* Resulting signal looks stationary
+
+## Model ID
+```{r}
+aic5.wge(x.d6)
+```
+
+```{r}
+e = est.arma.wge(x.d6, p = 1, q = 1)
+factor.wge(e$theta)
+e$avar
+mean(x)
+```
+
+### a
+
+```{r}
+models = list("Model 1" = list(d = d, s = s, phi = e$phi, theta = e$theta, vara = e$avar, res = e$res, sliding_ase = FALSE))
+n.ahead = 20
+
+mdl_compare = tswgewrapped::ModelCompareUnivariate$new(x = x, mdl_list = models, n.ahead = n.ahead)
+```
+
+```{r}
+mdl_compare$evaluate_residuals()
+```
+
+* Data is consistent with white noise
+
+### b
+```{r}
+## Important ##
+factors = mult.wge(fac1 = c(rep(0,5), 0.999), fac2 = e$phi)
+phi = factors$model.coef
+pt = plotts.true.wge(phi = phi, theta = e$theta)
+px = plotts.sample.wge(x)
+```
+* These are similar
+
+### c
+```{r}
+mdl_compare$plot_simple_forecasts(lastn = TRUE, limits = FALSE)
+f = fore.aruma.wge(x, d = d, s = s, phi = e$phi, theta = e$theta, n.ahead = 10, lastn = TRUE, limits = FALSE)
+```
+
+* Model forecasts do a pretty good job of forecasting the values
+
+### d
+
+
+
+```{r fig.height=8, message=FALSE, warning=FALSE}
+mdl_compare$plot_multiple_realizations(n.realizations = 4, seed = 100, plot = "realization", scales = 'free_y')
+```
+
+```{r message=FALSE, warning=FALSE}
+mdl_compare$plot_multiple_realizations(n.realizations = 4, seed = 100, plot = c("acf", "spectrum"), scales = 'fixed')
+```
+
+
+```{r}
+
+```
+
+
+

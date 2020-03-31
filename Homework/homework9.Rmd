@@ -1,0 +1,262 @@
+---
+title: "Homework 9"
+author: "Nikhil Gupta"
+date: "`r Sys.time()`"
+output:
+  github_document:
+    toc: yes
+    toc_depth: '6'
+  word_document:
+    toc: yes
+    toc_depth: '6'
+  html_document:
+    toc: yes
+    toc_depth: 6
+    toc_float: yes
+always_allow_html: yes
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Setup
+
+```{r}
+library(tswge)
+library(tidyverse)
+library(tswgewrapped)
+```
+
+
+# Problem 7.3
+
+## a
+
+```{r}
+data("sunspot.classic")
+sunspot.classic %>%  glimpse()
+x = sunspot.classic
+```
+
+```{r}
+px = plotts.sample.wge(x)
+```
+
+```{r}
+mean(x)
+```
+
+```{r}
+e.mle.ar2 = est.ar.wge(x, p = 2, type = 'mle')
+e.burg.ar2 = est.ar.wge(x, p = 2, type = 'burg')
+e.yw.ar2 = est.ar.wge(x, p = 2, type = 'yw')
+
+e.mle.ar2$avar
+e.burg.ar2$avar
+e.yw.ar2$avar
+
+```
+
+```{r}
+e.mle.ar8 = est.ar.wge(x, p = 8, type = 'mle')
+e.burg.ar8 = est.ar.wge(x, p = 8, type = 'burg')
+e.yw.ar8 = est.ar.wge(x, p = 8, type = 'yw')
+
+e.mle.ar8$avar
+e.burg.ar8$avar
+e.yw.ar8$avar
+```
+
+## b
+```{r}
+x = c(26.8, 27.8, 30.0, 31.6, 33.0, 34.2, 34.1, 33.2, 31.7, 31.5, 31.9, 31.5, 30.0, 29.4, 29.9)
+px = plotts.sample.wge(x)
+```
+
+```{r}
+mean(x)
+```
+
+```{r}
+e.mle.ar1 = est.ar.wge(x, p = 1, type = 'mle')
+e.mle.ar1$avar
+```
+
+## c
+```{r}
+e.mle.ar2 = est.ar.wge(x, p = 2, type = 'mle')
+e.mle.ar2$avar
+```
+
+# 7.4
+
+## a
+```{r}
+types = c('mle', 'burg', 'yw')
+phi = c(1.3, -0.6)
+n = 100
+mean = -20
+repeats = 3
+
+factor.wge(phi = phi)
+
+results = tribble(~actual_phi, ~est_type, ~avar, ~model_mean, ~phis) 
+
+for (i in 1:repeats){
+  p = length(phi)
+  x = mean + gen.arma.wge(n = n, phi = phi, plot = FALSE)    
+  
+  for (type in types){
+    e = est.ar.wge(x, p = p, type = type)
+    results = results %>% add_row(actual_phi = paste(round(phi, 4), collapse = " "), est_type = type,
+                                  avar = e$avar, model_mean = mean(x),
+                                  phis = paste(round(e$phi, 4), collapse = " "))
+  }
+  
+}
+
+results
+```
+
+* All three are fairly equal in estimating
+
+## b
+```{r}
+types = c('mle', 'burg', 'yw')
+phi = c(3.1, -4.1, 2.63, -0.72)
+n = 100
+mean = 100
+repeats = 3
+
+factor.wge(phi = phi)
+
+results = tribble(~actual_phi, ~est_type, ~avar, ~model_mean, ~phis) 
+
+for (i in 1:repeats){
+  p = length(phi)
+  x = mean + gen.arma.wge(n = n, phi = phi, plot = FALSE)    
+  
+  for (type in types){
+    e = est.ar.wge(x, p = p, type = type)
+    results = results %>% add_row(actual_phi = paste(round(phi, 4), collapse = " "), est_type = type,
+                                  avar = e$avar, model_mean = mean(x),
+                                  phis = paste(round(e$phi, 4), collapse = " "))
+  }
+  
+}
+
+results
+```
+
+* Yule Walker estimates are not good.
+
+# 7.5
+```{r}
+x = sunspot.classic
+```
+
+```{r}
+px = plotts.sample.wge(x)
+```
+
+```{r}
+e.mle.ar2 = est.ar.wge(x, p = 2, type = 'mle')
+pt = plotts.true.wge(phi = e.mle.ar2$phi)
+```
+
+```{r}
+e.mle.ar8 = est.ar.wge(x, p = 8, type = 'mle')
+pt = plotts.true.wge(phi = e.mle.ar8$phi)
+```
+
+* The high frequency bumps present in the AR(8) estimates are missing in the AR(2) estimates. These bumps were seen in the original data as well.
+
+# 7.6
+
+## a
+```{r}
+types = c('mle', 'burg', 'yw')
+phi = c(1.3, -0.6)
+n = 100
+mean = -20
+
+factor.wge(phi = phi)
+
+x = mean + gen.arma.wge(n = n, phi = phi, plot = FALSE)    
+px = plotts.sample.wge(x)
+
+for (type in types){
+  e = est.ar.wge(x, p = p, type = type)
+  pt = plotts.true.wge(phi = e$phi)
+}
+  
+```
+
+* All three estimates are fairly close
+
+## b
+```{r}
+types = c('mle', 'burg', 'yw')
+phi = c(3.1, -4.1, 2.63, -0.72)
+n = 100
+mean = 100
+
+factor.wge(phi = phi)
+
+x = mean + gen.arma.wge(n = n, phi = phi, plot = FALSE)    
+px = plotts.sample.wge(x)
+
+for (type in types){
+  e = est.ar.wge(x, p = p, type = type)
+  pt = plotts.true.wge(phi = e$phi)
+}
+  
+```
+
+* According to the spectral densities, there seem to be only a single frequency in all 3 estimaes. But the factor tabl tells a different story. MLE and Burg have 2 frequencies very close to each other, while YW only had 1 frequency at 0.09.
+
+```{r}
+
+```
+
+```{r}
+
+```
+
+```{r}
+
+```
+
+```{r}
+
+```
+
+```{r}
+
+```
+
+```{r}
+
+```
+
+```{r}
+
+```
+
+```{r}
+
+```
+
+```{r}
+
+```
+
+```{r}
+
+```
+
+```{r}
+
+```
+

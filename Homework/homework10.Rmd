@@ -1,0 +1,404 @@
+---
+title: "Homework 9"
+author: "Nikhil Gupta"
+date: "`r Sys.time()`"
+output:
+  github_document:
+    toc: yes
+    toc_depth: '6'
+  word_document:
+    toc: yes
+    toc_depth: '6'
+  html_document:
+    toc: yes
+    toc_depth: 6
+    toc_float: yes
+always_allow_html: yes
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Setup
+
+```{r}
+library(tswge)
+library(tidyverse)
+library(tswgewrapped)
+```
+
+
+# 8.1
+
+```{r}
+data("prob8.1a")
+data("prob8.1b")
+data("prob8.1c")
+data("prob8.1d")
+
+```
+
+```{r}
+px = plotts.sample.wge(prob8.1a)
+px = plotts.sample.wge(prob8.1b)
+px = plotts.sample.wge(prob8.1c)
+px = plotts.sample.wge(prob8.1d)
+
+acf(prob8.1a)
+acf(prob8.1b)
+acf(prob8.1c)
+acf(prob8.1d)
+```
+
+* We expect maybe 1 our of 20 ACF values to exceed the limit for white noise at maximum
+* 'a' seems to be white noise
+* 'b' Looks looks like AR(1) with a small negative phi value. There is some doubt that this is white noise
+* 'c' Does not look like white noise. The variance is higher in the 1st hald and there seems to be an autocorelation in the second half.
+* 'd' Seems consistent with white noise.
+
+# 8.2
+
+## a and b
+
+### Model 1
+```{r}
+phi = c(1.5, -1.21, 0.455)
+n = 200
+mean = 50
+
+factor.wge(phi = phi)
+
+xa = mean + gen.arma.wge(n = n, phi = phi, plot = FALSE, sn = 101)    
+px = plotts.sample.wge(xa)
+```
+
+### Model 2
+```{r}
+phi = c(1.6, -1.7, 1.28, -0.72)
+n = 200
+mean = 200
+
+factor.wge(phi = phi)
+
+xb = mean + gen.arma.wge(n = n, phi = phi, plot = FALSE, sn = 101)    
+px = plotts.sample.wge(xb)
+```
+
+### Model 3
+```{r}
+phi = c(1, -1.7, 0.8, -0.72)
+theta = 0.9
+n = 200
+mean = -10
+
+factor.wge(phi = phi)
+
+xc = mean + gen.arma.wge(n = n, phi = phi, theta = theta, plot = FALSE, sn = 101)    
+px = plotts.sample.wge(xc)
+```
+
+## c
+```{r}
+aic5.wge(xa, p = 0:8, q = 0:3)
+aic5.wge(xb, p = 0:8, q = 0:3)
+aic5.wge(xc, p = 0:8, q = 0:3)
+```
+
+## d
+### Model 1
+
+```{r}
+e.mle.a = est.arma.wge(xb, p = 3, q = 0)
+mean(xa)
+e.mle.a$avar
+```
+
+* Very close to original parameters
+
+### Model 2
+
+```{r}
+e.mle.b = est.arma.wge(xb, p = 4, q = 0)
+mean(xb)
+e.mle.b$avar
+```
+
+* Very close to original parameters
+
+### Model 3
+```{r}
+e.mle.c = est.arma.wge(xb, p = 5, q = 1)
+e.mle.c$theta
+mean(xc)
+e.mle.c$avar
+
+```
+
+* Phi is very close to original parameters; theta not so much
+* Extra term in phi is not so dominant.
+
+
+## e
+
+Fitted factors are fairly close to the actual ones.
+
+# 8.3
+
+## Setup
+```{r}
+data('wtcrude')
+data("eco.mort30")
+data("hadley")
+```
+
+## a
+```{r}
+px = plotts.sample.wge(wtcrude)
+```
+
+```{r}
+aic5.wge(wtcrude, p = 0:8, q = 0:3)
+```
+
+```{r}
+e.wtcrude = est.arma.wge(wtcrude, p = 7, q = 2)
+
+factor.wge(e.wtcrude$theta)
+mean(wtcrude)
+e.wtcrude$avar
+```
+
+* Note that dominant factor is f = 0.
+* The other factor with freq at 0.2758 almost gets cancelled by the MA term.
+
+
+
+## b
+```{r}
+px = plotts.sample.wge(eco.mort30)
+```
+
+```{r}
+aic5.wge(eco.mort30, p = 0:8, q = 0:3)
+```
+
+```{r}
+e.mort = est.arma.wge(eco.mort30, p = 6, q = 2)
+
+factor.wge(e.mort$theta)
+mean(eco.mort30)
+e.mort$avar
+```
+
+* MOstly wandering behavior due to f = 0
+* Freq at 0.34 is almost cancelled between phi and theta
+* Rest of the roots are less dominant.
+
+## c
+```{r}
+px = plotts.sample.wge(hadley)
+```
+
+```{r}
+aic5.wge(hadley, p = 0:8, q = 0:3)
+```
+
+```{r}
+e.temp = est.arma.wge(hadley, p = 4, q = 2)
+
+factor.wge(e.temp$theta)
+mean(hadley)
+e.temp$avar
+```
+
+* Wandering behavior is evident f = 0
+* f = 0.5 gets cancelled between AR and MA side
+
+
+# 8.5
+
+```{r}
+phi = c(0.8)
+d = 0
+theta = 0
+s = 6
+mean = 25
+n = 200
+
+x = gen.aruma.wge(n = n, phi = phi, theta = theta, d = d, s = s, plot = FALSE)
+```
+
+```{r}
+px = plotts.sample.wge(x)
+```
+
+## (i)
+```{r} 
+e.burg = est.ar.wge(x, p = 10, type = 'burg')
+```
+
+```{r}
+factor.wge.season(6)
+```
+
+* Yes, s = 6 is present in the overfit table
+
+## (ii)
+```{r}
+x.d6 = artrans.wge(x, phi.tr = c(rep(0,5),1))
+```
+
+* Resulting signal looks stationary
+
+## (iii)
+```{r}
+aic5.wge(x.d6)
+```
+
+```{r}
+e.mle = est.ar.wge(x.d6, p = 1, type = 'mle')
+e.mle$avar
+mean(x)
+```
+
+* Very close to original estimates.
+
+# 8.6
+
+## a
+```{r}
+data("freight")
+x = freight
+```
+
+```{r}
+px = plotts.sample.wge(x)
+```
+
+* Looks to have seasonality of 12
+```{r}
+e.burg = est.ar.wge(x, p = 15, type = 'burg')
+```
+
+```{r}
+factor.wge.season(12)
+```
+
+* s = 12 is reasonable from the overfit table.
+* Also has a extra term at f = 0 indicative of trend (ARIMA with d = 1)
+
+* Lets take out the seasonality first
+
+```{r}
+x.d12 = artrans.wge(x, phi.tr = c(rep(0,11),1))
+```
+
+* The differenced data actually shows AR properties (positive phi with wandering behavior) and not really ARIMA type of properties, so we will stop here and model as an ARMA process.
+
+```{r}
+aic5.wge(x.d12)
+```
+
+```{r}
+e.mle = est.ar.wge(x.d12, p = 2, type = 'mle')
+e.mle$avar
+mean(x)
+```
+
+* Note that the solution actually choose to use the ARIMA term.
+
+## b
+
+```{r}
+data("freeze")
+x = freeze
+```
+
+```{r}
+px = plotts.sample.wge(x, lag.max = 100)
+```
+
+* Looks to be more of a sinusoidal behavior more than seasonality.
+```{r}
+e.burg = est.ar.wge(x, p = 50, type = 'burg')
+```
+
+```{r}
+factor.wge.season(36)
+```
+
+* Most factors can be found in the overfit tables 
+* We will go with s = 36
+
+
+```{r}
+x.d36 = artrans.wge(x, phi.tr = c(rep(0,35),1))
+```
+
+* The differenced data actually looks like white noise.
+
+```{r}
+aic5.wge(x.d36)
+```
+
+We will go with ARMA(0,0) - White Noise
+
+```{r}
+e.mle = est.arma.wge(x.d36, p = 0)
+e.mle$avar
+mean(x)
+```
+
+## c
+```{r}
+data("lavon")
+x = lavon
+```
+
+```{r}
+px = plotts.sample.wge(x)
+```
+
+
+```{r}
+e.burg = est.ar.wge(x, p = 8, type = 'burg')
+```
+
+```{r}
+factor.wge.season(4)
+```
+
+* Does not seem to have a stong seasonal factor in there, so we fit a stationary model
+
+```{r}
+aic5.wge(x, p = 0:8, q = 0:3)
+```
+
+```{r}
+e.mle = est.arma.wge(x, p = 6, q = 3)
+factor.wge(e.mle$theta)
+e.mle$avar
+mean(x)
+```
+
+* Terms cancel out, so we use the next available model.
+
+```{r}
+e.mle = est.arma.wge(x, p = 8, q = 1)
+factor.wge(e.mle$theta)
+e.mle$avar
+mean(x)
+```
+
+* This is also much closer to the spectral density of data 
+
+* Also trying out the simper model from the 1st one (ARMA(6,3) --> AR(3,0))
+```{r}
+e.mle = est.arma.wge(x, p = 3, q = 0)
+# factor.wge(e.mle$theta)
+e.mle$avar
+mean(x)
+```
+
+* This one is also close but misses out on some smaller frequencies.
