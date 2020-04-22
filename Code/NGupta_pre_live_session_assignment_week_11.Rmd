@@ -124,12 +124,12 @@ mean(x)
 
 ### White Noise Eval
 ```{r}
-data = white_noise_eval(e.3.4$res, p = 3, q = 4)
+data = evaluate_residuals(e.3.4$res, p = 3, q = 4)
 data$pval %>% pluck()
 ```
 
 ```{r}
-data = white_noise_eval(e.11.3$res, p = 11, q = 3)
+data = evaluate_residuals(e.11.3$res, p = 11, q = 3)
 data$pval %>% pluck()
 ```
 
@@ -147,7 +147,7 @@ batch_size = 60
 
 
 ```{r}
-mdl_compare = tswgewrapped::ModelCompareUnivariate$new(x = x, mdl_list = models,
+mdl_compare = tswgewrapped::ModelCompareUnivariate$new(data = x, mdl_list = models,
                                                        n.ahead = n.ahead, batch_size = batch_size)
 ```
 
@@ -163,7 +163,7 @@ mdl_compare$plot_multiple_realizations(n.realizations = 4, seed = 100, plot = c(
 
 ### Compare Simple Forecasts
 ```{r fig.height=4, fig.width=12}
-mdl_compare$plot_simple_forecasts()
+p = mdl_compare$plot_simple_forecasts()
 ```
 
 ### ASE values across Batches
@@ -236,7 +236,7 @@ mean(x)
 ```
 
 ```{r}
-data = white_noise_eval(est$res, p = 12)
+data = evaluate_residuals(est$res, p = 12)
 data$pval %>% pluck()
 ```
 
@@ -253,7 +253,7 @@ batch_size = 70
 
 
 ```{r}
-mdl_compare = tswgewrapped::ModelCompareUnivariate$new(x = x, mdl_list = models,
+mdl_compare = tswgewrapped::ModelCompareUnivariate$new(data = x, mdl_list = models,
                                                        n.ahead = n.ahead, batch_size = batch_size)
 ```
 
@@ -290,7 +290,7 @@ ASEs %>%
 ### Forecasts across Batches
 
 ```{r, warning=FALSE, fig.height=4, fig.width=10}
-mdl_compare$plot_forecasts(only_sliding = TRUE)
+p = mdl_compare$plot_batch_forecasts(only_sliding = TRUE)
 ```
 
 

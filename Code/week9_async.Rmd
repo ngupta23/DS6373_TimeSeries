@@ -303,6 +303,7 @@ x = x$Inflation
 ```
 
 ```{r}
+acf(x)
 pacf(x)
 ```
 

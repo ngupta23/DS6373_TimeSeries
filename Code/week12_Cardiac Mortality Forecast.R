@@ -167,6 +167,7 @@ px = tswge::plotts.sample.wge(ksfit$residuals)
 aic_resids = aic.wge(ksfit$residuals)  # Picks AR(2)
 print(aic_resids)
 
+
 fit = arima(CMexpanded$cmort,order = c(aic_resids$p,0,aic_resids$q), xreg = CMexpanded %>% dplyr::select(-cmort))
 print(fit)
 AIC(fit) #AIC = 3088.997

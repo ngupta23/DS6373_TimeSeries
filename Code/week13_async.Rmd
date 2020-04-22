@@ -188,6 +188,44 @@ ASE = mean((lairTest - fore.mlp$mean)^2)
 ASE
 ```
 
+### Using tswgewrapped (version 1.8.10.6 does not support univariate for nnfor::mlp)
+
+```{r}
+# library(caret)
+# 
+# batch_size = 108
+# n.ahead = 36
+# data_train = as.data.frame(lairTrain)
+# var_interest = 'x'
+# 
+# 
+# # Random Parallel
+# model = ModelBuildNNforCaret$new(data = data_train, var_interest = var_interest, m = 12,
+#                                  search = 'random',
+#                                  grid = NA, tuneLength = 5,
+#                                  batch_size = batch_size, h = n.ahead,
+#                                  parallel = TRUE,
+#                                  seed = 1,
+#                                  verbose = 1)
+```
+
+```{r}
+# model$summarize_hyperparam_results()
+```
+
+
+```{r}
+# caret_model = model$get_final_models(subset = 'a')
+```
+
+```{r}
+# # Initialize the ModelCompareNNforCaret object
+# mdl_compare_mlp = ModelCompareNNforCaret$new(data = data_train, var_interest = var_interest,
+#                                              mdl_list = caret_model,
+#                                              verbose = 1)
+```
+
+
 ## 13.4 
 
 ### 2
@@ -203,13 +241,13 @@ fit.mlp
 ```
 
 ```{r}
-# With autoselection of number of layers
-set.seed(2)
-start = proc.time() 
-fit.mlp = mlp(lairTrain, hd.auto.type = 'cv')
-end = proc.time() 
-print(paste0("Time taken: ", end[3]-start[3]))
-fit.mlp
+# # With autoselection of number of layers
+# set.seed(2)
+# start = proc.time() 
+# fit.mlp = mlp(lairTrain, hd.auto.type = 'cv')
+# end = proc.time() 
+# print(paste0("Time taken: ", end[3]-start[3]))
+# fit.mlp
 ```
 
 ### 3
@@ -246,6 +284,8 @@ ASE
 ```
 
 ## Multivariate (With additional Regressors)
+
+### Manual
 ```{r}
 set.seed(2)
 tBS80 = ts(BS$sales[1:80])
@@ -256,10 +296,86 @@ fit3 = mlp(tBS80, xreg = tBSx[1:80, ])
 # fit3 = mlp(tBS80, xreg = tBSx[1:80, ], lags = 1:10, xreg.lags = (list(1:5, 1:3, 1:6)), keep = c(rep(T, 10)))  # separate lags for every predictor
 # fit3
 
-f = forecast(fit3,  h = 20, xreg = tBSx[81:100,])
+f = forecast(fit3,  h = 20, xreg = tBSx)# [81:100,])
 plot(BS$sales[81:100],type = "l")
 lines(seq(1,20),f$mean, col = "blue")
 ASE = mean((BS$sales[81:100]-f$mean)^2)
+ASE
+```
+
+
+### Using tswgewrapped 
+
+```{r}
+library(caret)
+
+batch_size = 60
+n.ahead = 20
+data_train = BS %>%  dplyr::slice(1:80) %>% dplyr::select(-X)
+data_test = BS %>%  dplyr::slice(81:100) %>% dplyr::select(-X)
+var_interest = 'sales'
+
+# Random Parallel
+model = ModelBuildNNforCaret$new(data = data_train, var_interest = var_interest, m = 7,
+                                 search = 'random',
+                                 grid = NA, tuneLength = 5,
+                                 batch_size = batch_size, h = n.ahead,
+                                 parallel = TRUE,
+                                 seed = 1,
+                                 verbose = 1
+                                )
+```
+
+```{r}
+model$summarize_hyperparam_results()
+```
+
+```{r}
+model$summarize_best_hyperparams()
+```
+
+```{r}
+## Print model (recommended - best hyperparameters)
+model$get_final_models(subset = 'r')
+```
+
+```{r}
+caret_model = model$get_final_models(subset = 'a')
+```
+
+```{r}
+# Initialize the ModelCompareNNforCaret object
+mdl_compare_mlp = ModelCompareNNforCaret$new(data = data_train, var_interest = var_interest,
+                                             mdl_list = caret_model,
+                                             verbose = 1)
+```
+
+```{r}
+p = mdl_compare_mlp$plot_batch_ases()
+p$ASEs
+```
+
+```{r}
+newxreg = data_test %>% dplyr::select(-!!var_interest)
+```
+
+```{r}
+batchf = mdl_compare_mlp$plot_batch_forecasts()
+batchf$forecasts
+```
+
+```{r}
+f = mdl_compare_mlp$plot_simple_forecasts(newxreg = newxreg)
+f$forecasts
+```
+
+```{r}
+plot(BS$sales[81:100],type = "l")
+lines(seq(1,20),f$forecasts$f, col = "blue")
+```
+
+```{r}
+ASE = mean((BS$sales[81:100]-f$forecasts$f)^2)
 ASE
 ```
 
@@ -326,22 +442,25 @@ ASE1
 ```
 
 ## 13.5 (2)
-```{r}
-set.seed(2)
-tBS80 = ts(BS$sales[1:80])
-tBSx = data.frame(ad_tv = ts(BS$ad_tv), ad_online = ts(BS$ad_online, frequency = 7), discount = ts(BS$discount)) 
 
-## Regressor lags will be picked automatically
-fit3 = mlp(tBS80, xreg = tBSx, hd.auto.type = 'cv')
-fit3
+* Takes too long so commented out.
+
+```{r}
+# set.seed(2)
+# tBS80 = ts(BS$sales[1:80])
+# tBSx = data.frame(ad_tv = ts(BS$ad_tv), ad_online = ts(BS$ad_online, frequency = 7), discount = ts(BS$discount)) 
+# 
+# ## Regressor lags will be picked automatically
+# fit3 = mlp(tBS80, xreg = tBSx, hd.auto.type = 'cv')
+# fit3
 ```
 
 
 ```{r}
-f = forecast(fit3, h = 20, xreg = tBSx)
-plot(BS$sales[81:100],type = "l")
-lines(seq(1,20),f$mean, col = "blue")
-ASE = mean((BS$sales[81:100]-f$mean)^2)
-ASE
+# f = forecast(fit3, h = 20, xreg = tBSx)
+# plot(BS$sales[81:100],type = "l")
+# lines(seq(1,20),f$mean, col = "blue")
+# ASE = mean((BS$sales[81:100]-f$mean)^2)
+# ASE
 ```
 

@@ -3,12 +3,12 @@ title: "Live Session Assignment 11"
 author: "Nikhil Gupta"
 date: "`r Sys.time()`"
 output:
-  github_document:
-    toc: yes
-    toc_depth: 6
   word_document:
     toc: yes
     toc_depth: '6'
+  github_document:
+    toc: yes
+    toc_depth: 6
   html_document:
     toc: yes
     toc_depth: 6

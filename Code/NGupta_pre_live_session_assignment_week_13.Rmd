@@ -52,6 +52,8 @@ data_test = data %>% slice(30:37)
 
 ## Modeling
 
+### Manual
+
 ```{r}
 set.seed(2)
 
@@ -74,6 +76,83 @@ ASE = mean((data$Melanoma %>% tail(h) - f$mean)^2)
 ASE
 ```
 
+### tswgewrapped
+
+```{r}
+# Fit Model
+set.seed(2)
+
+var_interest = 'Melanoma'
+batch_size = 29
+n.ahead = 8
+
+# Random Parallel
+model = ModelBuildNNforCaret$new(data = data_train %>% dplyr::select(-Year),
+                                 var_interest = var_interest,
+                                 m = 1,
+                                 search = 'random',
+                                 grid = NA, tuneLength = 10,
+                                 batch_size = batch_size, h = n.ahead,
+                                 parallel = TRUE,
+                                 seed = 1,
+                                 verbose = 1
+                                )
+
+```
+
+```{r}
+model$summarize_hyperparam_results()
+```
+
+```{r}
+model$summarize_best_hyperparams()
+```
+
+```{r}
+## Print model (recommended - best hyperparameters)
+model$get_final_models(subset = 'r')
+```
+
+```{r}
+caret_model = model$get_final_models(subset = 'a')
+
+# Initialize the ModelCompareNNforCaret object
+mdl_compare_mlp = ModelCompareNNforCaret$new(data = data_train,
+                                             var_interest = var_interest,
+                                             mdl_list = caret_model,
+                                             verbose = 0)
+```
+
+```{r}
+p = mdl_compare_mlp$plot_batch_ases(only_sliding = FALSE)
+p$ASEs
+```
+
+```{r}
+newxreg = data_test %>% dplyr::select(-!!var_interest, -Year)
+```
+
+```{r}
+batchf = mdl_compare_mlp$plot_batch_forecasts(only_sliding = FALSE)
+batchf$forecasts
+```
+
+
+```{r}
+f = mdl_compare_mlp$plot_simple_forecasts(newxreg = newxreg)
+f$forecasts
+```
+
+```{r}
+plot(data$Melanoma,type = "l")
+lines(seq(30, 37),f$forecasts$f, col = "blue")
+```
+
+```{r}
+ASE = mean((data_test$Melanoma-f$forecasts$f)^2)
+ASE
+```
+
 # Schumway pollution data
 
 ```{r}
@@ -88,6 +167,7 @@ data_test = data %>% slice(499:508)
 
 ## Modeling
 
+### Manual
 ```{r}
 set.seed(2)
 
@@ -102,9 +182,11 @@ fit = nnfor::mlp(y = ts(data_train$cmort, frequency = 52),
                  
 fit
 ```
+
 ```{r}
 plot(fit)
 ```
+
 ```{r}
 h = 10
 
@@ -115,6 +197,113 @@ plot(f)
 plot(data$cmort, type = "l", ylab = "Time Series")
 lines(seq(nrow(data_train)+1,nrow(data)), f$mean, col = "blue")
 ASE = mean((data$cmort %>% tail(h) - f$mean)^2)
+ASE
+```
+
+### tswgewrapped
+
+```{r}
+# Exploratory Analysis
+eda = MultivariateEDA$new(data = data,
+                          var_interest = 'cmort',
+                          var_time = 'Week')
+
+
+eda$plot_ccf_analysis(negative_only = TRUE)
+```
+
+```{r}
+# Fit Model
+set.seed(1)
+
+var_interest = 'cmort'
+batch_size = 470
+n.ahead = 10
+
+# grid_size = 10
+# reps = sample(1:25, grid_size, replace = TRUE)
+# hd = sample(1:10, grid_size, replace = TRUE, prob = c(10:1))
+# allow.season.detect = rep(FALSE, grid_size)
+
+grid_size = 1
+reps = 20
+hd = 1
+allow.det.season = FALSE
+
+nngrid = data.frame(reps = reps,
+                    hd = hd,
+                    allow.det.season = allow.det.season
+                    )
+
+# Random Parallel
+model = ModelBuildNNforCaret$new(data = data_train %>% dplyr::select(-Week),
+                                 var_interest = var_interest,
+                                 m = 52,
+                                 search = 'grid',
+                                 grid = nngrid, tuneLength = NA,
+                                 batch_size = batch_size, h = n.ahead,
+                                 parallel = TRUE,
+                                 seed = 1,
+                                 verbose = 1,
+                                 difforder = c(1),
+                                 sel.lag = TRUE,  ## If FALSE, then it keeps all lags, If TRUE, it may remove some, applied to both univariate and xreg
+                                 lags = 1:52, ## Which univariate lags to try
+                                 keep = rep(TRUE, 52), ## Which univariate lags to be forced to be kept
+                                 xreg.lags = (list(1:13, 1:13)) ## Which xreg lags to try
+                                )
+
+```
+
+```{r}
+model$summarize_hyperparam_results()
+```
+
+```{r}
+model$summarize_best_hyperparams()
+```
+
+```{r}
+## Print model (recommended - best hyperparameters)
+model$get_final_models(subset = 'r')
+```
+
+```{r}
+caret_model = model$get_final_models(subset = 'a')
+
+# Initialize the ModelCompareNNforCaret object
+mdl_compare_mlp = ModelCompareNNforCaret$new(data = data_train,
+                                             var_interest = var_interest,
+                                             mdl_list = caret_model,
+                                             verbose = 0)
+```
+
+```{r}
+p = mdl_compare_mlp$plot_batch_ases(only_sliding = FALSE)
+p$ASEs %>% na.omit()
+```
+
+```{r}
+newxreg = data_test %>% dplyr::select(-!!var_interest, -Week)
+```
+
+```{r}
+batchf = mdl_compare_mlp$plot_batch_forecasts(only_sliding = FALSE)
+batchf$forecasts
+```
+
+
+```{r}
+f = mdl_compare_mlp$plot_simple_forecasts(newxreg = newxreg)
+f$forecasts
+```
+
+```{r}
+plot(data$cmort,type = "l")
+lines(seq(499, 508),f$forecasts$f, col = "blue")
+```
+
+```{r}
+ASE = mean((data_test$cmort-f$forecasts$f)^2)
 ASE
 ```
 

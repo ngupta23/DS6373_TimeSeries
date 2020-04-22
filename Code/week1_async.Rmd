@@ -19,23 +19,26 @@ knitr::opts_chunk$set(echo = TRUE)
 
 ```{r}
 library(tswge)
-source("common_functions.R")
+library(tswgewrapped)
+#source("common_functions.R")
 ```
 
 # Noctula vs Lavon (Stationarity)
 
 ```{r}
 data("noctula")
-plot(noctula)
-acf(noctula[1:48])
-acf(noctula[49:96])
+check_stationarity(noctula)
+# plot(noctula)
+# acf(noctula[1:48])
+# acf(noctula[49:96])
 ```
 
 ```{r}
 data("lavon") 
-plot(lavon)
-acf(lavon[1:56])
-acf(lavon[57:112])
+check_stationarity(lavon)
+# plot(lavon)
+# acf(lavon[1:56])
+# acf(lavon[57:112])
 ```
 
 
@@ -43,19 +46,16 @@ acf(lavon[57:112])
 
 ```{r}
 data("whale")
-plot(whale)
-lines(whale)
-len = length(whale)
-len_by_2 = round(len/2)
-seg_2_start = len_by_2+1
-acf(whale[1:len_by_2])
-acf(whale[seg_2_start:len])
+check_stationarity(whale)
+# plot(whale)
+# lines(whale)
+# len = length(whale)
+# len_by_2 = round(len/2)
+# seg_2_start = len_by_2+1
+# acf(whale[1:len_by_2])
+# acf(whale[seg_2_start:len])
 ```
 
-```{r}
-# Checking functionality of function
-check_stationarity(whale)
-```
 
 
 ```{r}

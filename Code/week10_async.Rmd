@@ -20,6 +20,7 @@ knitr::opts_chunk$set(echo = TRUE)
 # Setup
 ```{r}
 library(tswge)
+library(tswgewrapped)
 library(tidyverse)
 library(tseries)
 library(orcutt)
@@ -44,7 +45,7 @@ x = x$Adj.Close
 ```
 
 ```{r}
-check_stationarity(x)
+tswgewrapped::check_stationarity(x)
 ```
 
 ### 4

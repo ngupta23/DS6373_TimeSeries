@@ -9,7 +9,7 @@ plotts.wge(patemp)
 parzen.wge(patemp)
 
 # Signal + Noise Model
-fore.patemp.spn = fore.sigplusnoise.wge(patemp,freq = .083, max.p = 4, n.ahead = 24, linear = FALSE, lastn = TRUE)
+fore.patemp.spn = fore.sigplusnoise.wge(patemp, freq = .083, max.p = 4, n.ahead = 24, linear = FALSE, lastn = TRUE)
 ASE.spn = mean((patemp[(length(patemp)-23): length(patemp)]-fore.patemp.spn$f)^2)
 ASE.spn
 

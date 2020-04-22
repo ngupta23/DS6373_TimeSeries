@@ -337,7 +337,7 @@ px = gen.aruma.wge(n = length(hadley), d = 1, phi = d1.temp.est$phi, theta = d1.
 px = gen.aruma.wge(n = length(hadley), d = 1, phi = d1.temp.est$phi, theta = d1.temp.est$theta, vara = d1.temp.est$avar)
 ```
 
-### Forecast Comparison
+#### Forecast Comparison
 
 ```{r}
 f = fore.arma.wge(hadley,phi=c(1.27,-.47,.19), theta=.63, n.ahead=50, limits=TRUE)
@@ -347,9 +347,9 @@ f = fore.arma.wge(hadley,phi=c(1.27,-.47,.19), theta=.63, n.ahead=50, limits=TRU
 f = fore.aruma.wge(hadley,d=1,phi=c(.33,-.18), theta=.7, n.ahead=50, limits=TRUE)
 ```
 
-## Signal Plus Noise Model
+### Signal Plus Noise Model
 
-### Fit a GLM model
+#### Fit a GLM model
 ```{r}
 x=hadley
 n=length(x)
@@ -360,11 +360,15 @@ d
 
 ```{r}
 # x.z are the residuals from the regression line
-# Could have also used d$residuals to compute residuals
 x.z = x-d$coefficients[1]-d$coefficients[2]*t 
+
+# Could have also used d$residuals to compute residuals
+r = d$residuals
+
+all.equal(x.z, unname(r))
 ```
 
-### Manual Cochrane Orcutt Test
+#### Manual Cochrane Orcutt Test
 ```{r}
 # Fit AR(p) to the residuals
 ar.z = aic.wge(x.z,p=0:6)
@@ -390,7 +394,7 @@ fit = lm(y.trans~t.trans)
 summary(fit)
 ```
 
-### Evaluate White Noise Terms
+#### Evaluate White Noise Terms
 ```{r}
 plot(fit$residuals)
 acf(fit$residuals)
@@ -404,7 +408,7 @@ ljung.wge(fit$residuals, p = 4)  # In the videos p was not provided - why?
 ljung.wge(fit$residuals, p = 4, K = 48) # In the videos p was not provided - why?
 ```
 
-### Checking Similar Realizations
+#### Checking Similar Realizations
 ```{r}
 x = gen.sigplusnoise.wge(length(hadley), b0 = -0.5257, b1 = 0.0044, phi = ar.z$phi, vara = 0.0103)
 x = gen.sigplusnoise.wge(length(hadley), b0 = -0.5257, b1 = 0.0044, phi = ar.z$phi, vara = 0.0103)
@@ -414,7 +418,7 @@ x = gen.sigplusnoise.wge(length(hadley), b0 = -0.5257, b1 = 0.0044, phi = ar.z$p
 
 * These loook consistent with the actual data
 
-### Forecast 
+#### Forecast 
 ```{r}
 f = fore.sigplusnoise.wge(hadley, linear = TRUE, max.p=4, n.ahead=50, limits=TRUE)
 ```

@@ -2,12 +2,15 @@
 title: "MLR with Correlated Errors with Seasonality and ARIMA"
 author: "Nikhil Gupta"
 date: "`r Sys.time()`"
-always_allow_html: yes
 output:
- html_document:
-   toc: true
-   toc_float: true
-   toc_depth: 6
+  word_document:
+    toc: yes
+    toc_depth: '6'
+  html_document:
+    toc: yes
+    toc_depth: 6
+    toc_float: yes
+always_allow_html: yes
 ---
 
 ```{r setup, include=FALSE}

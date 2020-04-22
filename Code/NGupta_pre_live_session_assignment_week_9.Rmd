@@ -83,7 +83,7 @@ ase
 ```
 
 ```{r}
-r = sliding_ase(x, phi = phi, theta = theta, n.ahead = n.ahead)
+r = tswgewrapped::sliding_ase_univariate(x, phi = phi, theta = theta, n.ahead = n.ahead)
 r$ASEs
 ```
 
@@ -95,7 +95,7 @@ if (ase != r$ASEs){
 ```
 
 ```{r}
-r = sliding_ase(x, phi = phi, theta = theta, n.ahead = n.ahead, batch_size = 104)
+r = tswgewrapped::sliding_ase_univariate(x, phi = phi, theta = theta, n.ahead = n.ahead, batch_size = 104)
 mean(r$ASEs)
 ```
 
@@ -117,7 +117,7 @@ ase
 ```
 
 ```{r}
-r = sliding_ase(x, phi = phi, theta = theta, n.ahead = n.ahead)
+r = tswgewrapped::sliding_ase_univariate(x, phi = phi, theta = theta, n.ahead = n.ahead)
 r$ASEs
 ```
 
@@ -128,7 +128,7 @@ if (ase != r$ASEs){
 ```
 
 ```{r}
-r = sliding_ase(x, phi = phi, theta = theta, n.ahead = n.ahead, batch_size = 104)
+r = tswgewrapped::sliding_ase_univariate(x, phi = phi, theta = theta, n.ahead = n.ahead, batch_size = 104)
 mean(r$ASEs)
 ```
 

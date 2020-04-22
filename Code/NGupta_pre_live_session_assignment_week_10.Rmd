@@ -78,7 +78,7 @@ x.d1 = artrans.wge(x, phi.tr = 1)
 px = plotts.sample.wge(x.d1)
 ```
 
-* THis shows a more sinusoidal behavior. It also lookks sort of stationary. We will try to model it using aic5
+* THis shows a more sinusoidal behavior. It also looks sort of stationary. We will try to model it using aic5
 
 ## ARMA Estimation
 ```{r}
@@ -106,7 +106,7 @@ f = fore.aruma.wge(x, phi = e$phi, theta = e$theta, d = 1, s = 0, n.ahead = 12, 
 ```
 
 ```{r}
-r = sliding_ase(x, phi = e$phi, theta = e$theta, d = 1, s = 0, n.ahead = 12, batch_size = 60)
+r = tswgewrapped::sliding_ase_univariate(x, phi = e$phi, theta = e$theta, d = 1, s = 0, n.ahead = 12, batch_size = 60)
 mean(r$ASEs)
 sd(r$ASEs)
 ```
@@ -170,7 +170,7 @@ f = fore.aruma.wge(x, phi = e$phi, theta = e$theta, d = 0, s = 0, lambda = facto
 ```
 
 ```{r}
-r = sliding_ase(x, phi = e$phi, theta = e$theta, d = 0, s = 0, n.ahead = 12, batch_size = 60, lambda = factors$model.coef)
+r = tswgewrapped::sliding_ase_univariate(x, phi = e$phi, theta = e$theta, d = 0, s = 0, n.ahead = 12, batch_size = 60, lambda = factors$model.coef)
 mean(r$ASEs)
 sd(r$ASEs)
 ```
@@ -194,5 +194,60 @@ summary(cfit)
 * Does not show a lineear trend in the data. Since the trend is not fouund, we will not continue the fitting process using this method.
 ```{r}
 
+```
+
+
+# Live Session
+
+```{r}
+# Time Series Unit 10 Live Session
+
+# Setup
+library(tswge)
+data(patemp)
+```
+
+```{r}
+# EDA
+p = plotts.wge(patemp)
+p = parzen.wge(patemp)
+```
+
+```{r}
+# Signal + Noise Model
+fore.patemp.spn = fore.sigplusnoise.wge(patemp, freq = .083, max.p = 4, n.ahead = 24, linear = FALSE, lastn = TRUE)
+fore.patemp.spn$b
+factor.wge(fore.patemp.spn$phi.z)
+fore.patemp.spn$wnv
+
+ASE.spn = mean((patemp[(length(patemp)-23): length(patemp)]-fore.patemp.spn$f)^2)
+ASE.spn
+```
+
+
+```{r}
+# ARUMA with s = 12 only
+fore.patemp.B12 = fore.aruma.wge(patemp,s = 12, n.ahead = 24, lastn = TRUE)
+ASE.B12 = mean((patemp[(length(patemp)-23): length(patemp)]-fore.patemp.B12$f)^2)
+ASE.B12
+```
+
+```{r}
+# ARUMA with s = 12 and ARMA noise
+patemp_B12 = artrans.wge(patemp, phi.tr = c(rep(0,11),1))
+aic5.wge(patemp_B12)
+patemp.est.AR2 = est.arma.wge(patemp,p = 2)
+fore.patemp.B12.AR2 = fore.aruma.wge(patemp,s = 12, phi = patemp.est.AR2$phi, n.ahead = 24, lastn = TRUE)
+ASE.B12.AR2 = mean((patemp[(length(patemp)-23): length(patemp)]-fore.patemp.B12.AR2$f)^2)
+ASE.B12.AR2
+```
+
+```{r}
+# ARUMA with 2 Lambda terms and ARMA noise
+y.tr=artrans.wge(patemp,phi.tr=c(1.732,-1))
+patemp.est.lamda.AR3 = est.ar.wge(y.tr,p=3)
+fore.patemp.L2.AR3 = fore.aruma.wge(patemp,lambda = c(1.732, -1), phi = patemp.est.lamda.AR3$phi, n.ahead = 24, lastn = TRUE)
+ASE.L2.AR3 = mean((patemp[(length(patemp)-23): length(patemp)]-fore.patemp.L2.AR3$f)^2)
+ASE.L2.AR3
 ```
 

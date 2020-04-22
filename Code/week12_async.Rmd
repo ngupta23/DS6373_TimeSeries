@@ -157,6 +157,7 @@ tswgewrapped::evaluate_residuals(fit$residuals %>% na.omit())
 
 #### Finding what lag to use
 
+##### Manual
 ```{r}
 # By convention, the X2 variable comes first
 c = ccf(BSales$ad_tv, BSales$sales, lag.max = 10)
@@ -180,6 +181,17 @@ max_ccf = c$lag[,1,1][index]
 max_ccf
 ```
 
+##### Using tswgewrapped
+```{r}
+BSales = read.csv("../Datasets/businesssales.csv", header = TRUE)
+eda = MultivariateEDA$new(data = BSales, var_interest = 'sales', var_time = 'X')
+eda$plot_ccf_analysis(negative_only = TRUE)
+```
+
+```{r}
+eda$plot_scatterplots()
+```
+
 #### 12.3 (4)
 ```{r}
 data = read.csv("../Datasets/whatisthelag.csv")
@@ -187,6 +199,8 @@ data %>% glimpse()
 ```
 
 ```{r}
+## in R First Variable is lagged (X_(t+k)), second variable is fixed
+## Also note the sign of lag --> It is t+k
 c = ccf(data$X1, data$Y, lag.max = 10)
 index = which(abs(c$acf[,1,1]) == max(abs(c$acf[,1,1])))
 max_ccf = c$lag[,1,1][index] 
@@ -235,6 +249,13 @@ fore.arma.wge(x2,phi=x2.est$phi,n.ahead=5,lastn=FALSE,limits=FALSE)
 * Can X1 tell us something about X2 and vice versa
 
 ```{r}
+X = cbind(x1,x2)
+X %>% head()
+```
+
+#### Manual
+
+```{r}
 # By convention, the X2 variable comes first
 c = ccf(x2.25, x1.25, lag.max = 10)
 index = which(abs(c$acf[,1,1]) == max(abs(c$acf[,1,1])))
@@ -243,12 +264,6 @@ max_ccf
 ```
 
 * Lag -5 for x2 seems to be important to make a prediction for x1
-
-```{r}
-X = cbind(x1,x2)
-X %>% head()
-```
-
 
 ```{r}
 # VARselect will select the best K for this VAR model
@@ -274,12 +289,59 @@ preds$fcst
 # preds$fcst$x1[1,1] - [5,1] are the VAR forecasts for x1.  Similar for x2
 ```
 
-
 ```{r}
 fanchart(preds, colors = brewer.pal(n = 8, name = "Blues")) # Change color pallet to make distinguishable. 
 ```
 
 * Upper and Lower Confidence intervals for X1 are almost the same
+
+#### Using tswgewrapped
+
+```{r}
+eda = MultivariateEDA$new(data = cbind(x1.25, x2.25), var_interest = 'x1.25')
+eda$plot_ccf_analysis(negative_only = TRUE)
+```
+
+```{r}
+lag.max = 6
+var_interest = 'x1'
+  
+models = list("AIC Const" = list(select = "aic", trend_type = "const", lag.max = lag.max))
+
+mdl_build_var = ModelBuildMultivariateVAR$new(data = X, var_interest = var_interest,
+                                              mdl_list = models, verbose = 0)
+
+```
+
+```{r}
+mdl_build_var$summarize_build()
+```
+
+
+```{r}
+models = mdl_build_var$get_final_models(subset = 'u')
+summary(models$`AIC Const`$varfit)
+```
+
+
+```{r}
+# # Setup Models to be compared with sliding ASE = TRUE
+# for (name in names(models)){
+#   models[[name]][['sliding_ase']] = TRUE
+# }
+
+# Initialize the ModelCompareMultivariateVAR object
+mdl_compare_var = ModelCompareMultivariateVAR$new(data = as.data.frame(X), var_interest = var_interest,
+                                                  mdl_list = models, n.ahead = 5, verbose = 0)
+```
+
+```{r}
+mdl_compare_var$get_xIC(sort_by = 'BIC')
+```
+
+```{r}
+mdl_compare_var$plot_simple_forecasts(lastn = FALSE, limits = TRUE, plot = TRUE)
+```
 
 # Melanoma Data
 
@@ -362,8 +424,8 @@ fanchart(preds, colors = brewer.pal(n = 8, name = "Blues")) # Change color palle
 ```
 
 ```{r}
-ASE = mean((preds$fcst$mel.67[1:8,1] - melanoma[30:37])^2)
-ASE
+# ASE = mean((preds$fcst$mel.67[1:8,1] - melanoma[30:37])^2)
+# ASE
 ```
 
 ## Multiple Linear Regression with Correlated Errors
