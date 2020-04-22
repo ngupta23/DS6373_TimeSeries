@@ -1,0 +1,99 @@
+---
+title: "Model Compare Univariate"
+author: "Nikhil Gupta"
+date: "`r Sys.time()`"
+output:
+  github_document:
+    toc: yes
+    toc_depth: '6'
+  word_document:
+    toc: yes
+    toc_depth: '6'
+  html_document:
+    toc: yes
+    toc_depth: 6
+    toc_float: yes
+always_allow_html: yes
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r message=FALSE, warning=FALSE}
+library(tswge)
+library(tswgewrapped)
+library(tidyverse)
+```
+
+
+```{r message=FALSE, warning=FALSE}
+# source("ModelCompareUnivariate.R")
+```
+
+```{r}
+data("airlog")
+
+# Woodward Gray Airline Model
+phi_wg = c(-0.36, -0.05, -0.14, -0.11, 0.04, 0.09, -0.02, 0.02, 0.17, 0.03, -0.10, -0.38)
+d_wg = 1
+s_wg = 12
+
+# Parzen Model
+phi_pz = c(0.7400, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.3800, -0.2812)
+s_pz = 12
+
+# Box Model
+d_bx = 1
+s_bx = 12  
+theta_bx =  c(0.40, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0.60, -0.24)
+
+
+models = list("Woodward Gray Model A" = list(phi = phi_wg, d = d_wg, s = s_wg, sliding_ase = FALSE),
+              "Woodward Gray Model B" = list(phi = phi_wg, d = d_wg, s = s_wg, sliding_ase = TRUE),
+              "Parzen Model A" = list(phi = phi_pz, s = s_pz, sliding_ase = FALSE),
+              "Parzen Model B" = list(phi = phi_pz, s = s_pz, sliding_ase = TRUE),
+              "Box Model A" = list(theta = theta_bx, d = d_bx, s = s_bx, sliding_ase = FALSE),
+              "Box Model B" = list(theta = theta_bx, d = d_bx, s = s_bx, sliding_ase = TRUE)
+              )
+```
+
+
+```{r}
+mdl_compare = tswgewrapped::ModelCompareUnivariate$new(x = airlog, mdl_list = models,
+                                                       n.ahead = 36, batch_size = 72)
+```
+
+```{r, warning=FALSE}
+mdl_compare$plot_histogram_ases()
+```
+
+```{r, warning=FALSE, fig.height=4, fig.width=10}
+mdl_compare$plot_forecasts(only_sliding = TRUE)
+```
+
+```{r}
+mdl_compare$statistical_compare()  
+# Only compares models that have sliding_ase calculations, since we need more than 1 result per model
+```
+
+```{r}
+ASEs = mdl_compare$get_tabular_metrics(ases = TRUE)
+print(ASEs)
+```
+
+
+```{r}
+forecasts = mdl_compare$get_tabular_metrics(ases = FALSE)
+print(forecasts)
+```
+
+
+```{r}
+
+```
+
+```{r}
+
+```
+

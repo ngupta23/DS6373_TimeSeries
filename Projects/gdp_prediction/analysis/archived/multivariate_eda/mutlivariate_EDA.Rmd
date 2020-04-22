@@ -1,0 +1,295 @@
+---
+title: "R Notebook"
+output: github_document
+---
+
+## Setup
+```{r message=FALSE, warning=FALSE}
+library(tswge)
+library(tswgewrapped)
+library(tidyverse)
+library(ggplot2)
+library(tseries)
+library(vars)
+library(reshape)
+source('./plotting.R')
+```
+
+
+# Ideas to consider
+
+1. Add scatterplots to check for multicolinearity.
+2. All variables given to a VAR model must be stationary. But some of our variables are non stationary. That might be an issue. Maybe consider converting some of them to % changes to make them more stationary.
+3. We may be missing some important columns based on CCF analysis below. Add them to see if forecasts improve.
+4. For the MLR model, we need to predict the independent variables for the next 2 time points rather than using the actual values from the test data (since these will not be available while forecasting). The VAR model assumes these are not available and just uses data upto t0 to make the forecasts so that is why those ASE values may be higher. Just a thought.
+5. Maybe add seasonality of 6 in the models based on overfit tables?
+
+
+```{r}
+data = read.csv("../data/economic_indicators_all_ex_3mo_china.csv")
+data %>% glimpse()
+```
+
+
+# Checking for seasonality
+```{r}
+px = plotts.sample.wge(data$gdp_change)
+```
+
+```{r}
+factor.wge.season(6)
+e = est.ar.wge(data$gdp_change, p = 6, type = 'burg')
+e = est.ar.wge(data$gdp_change, p = 8, type = 'burg')
+```
+
+* There may be seasonality of 6 which could be included in the VAR and MLR models
+
+# Plot all data
+
+```{r}
+eda = MultivariateEDA$new(data = data, var_interest = "gdp_change", var_time = "date")
+```
+
+```{r fig.width=10}
+eda$plot_data(ncol = 3)
+```
+
+```{r fig.width=15, fig.height=15, message=FALSE}
+eda$plot_scatterplots()
+```
+
+* Some of the variables are not stationary. This may be an issue for some of the models like VAR
+
+# CCF Analysis
+
+```{r}
+ccf_results = eda$plot_ccf_analysis(negative_only = TRUE)
+ccf_results
+```
+
+# Lag Correlations
+
+The the relationship between the response variable and lags of the explanatory variables.
+
+## Unemployement Rate
+
+```{r, message=FALSE, fig.height=10, fig.width=10}
+correlations <- plot.cross.lags(data, 'gdp_change', 'unrate', 16)
+```
+
+
+## Change in Non-Farm Jobs
+
+Correlations are low to moderate in the first few lags.
+
+```{r, message=FALSE, fig.height=10, fig.width=10}
+correlations <- rbind(correlations, plot.cross.lags(data, 'gdp_change', 'nfjobschg', 16))
+```
+
+## 10 Yr Treasury Yield
+
+Correlations are moderate in the first 16 lags of the explanatory variable.
+
+```{r, message=FALSE, fig.height=10, fig.width=10}
+correlations <- rbind(correlations, plot.cross.lags(data, 'gdp_change', 'treas10yr', 16))
+```
+
+## Federal Interest Rate
+
+Correlations are moderate in the first 16 lags of the explanatory variable.
+
+```{r, message=FALSE, fig.height=10, fig.width=10}
+correlations <- rbind(correlations, plot.cross.lags(data, 'gdp_change', 'fedintrate', 16))
+```
+
+## Change in Personal Income
+
+Correlations are low to moderate in the first few lags of the explanatory variable.
+
+```{r, message=FALSE, fig.height=10, fig.width=10}
+correlations <- rbind(correlations, plot.cross.lags(data, 'gdp_change', 'personincomechg', 16))
+```
+
+## Change in CPI
+
+Correlations are low to moderate in the first 16 lags of the explanatory variable.
+
+```{r, message=FALSE, fig.height=10, fig.width=10}
+correlations <- rbind(correlations, plot.cross.lags(data, 'gdp_change', 'cpichg', 16))
+```
+
+## Change in Population
+
+Correlations are low in the first 16 lags of the explanatory variable.
+
+```{r, message=FALSE, fig.height=10, fig.width=10}
+correlations <- rbind(correlations, plot.cross.lags(data, 'gdp_change', 'popchg', 16))
+```
+
+## Change in Corporate Profits
+
+```{r, message=FALSE, fig.height=10, fig.width=10}
+correlations <- rbind(correlations, plot.cross.lags(data, 'gdp_change', 'corpprofitchg', 16))
+```
+
+## Change in Crude Prices
+
+```{r, message=FALSE, fig.height=10, fig.width=10}
+correlations <- rbind(correlations, plot.cross.lags(data, 'gdp_change', 'crude_wtichg', 16))
+```
+
+## Change in PPI
+
+```{r, message=FALSE, fig.height=10, fig.width=10}
+correlations <- rbind(correlations, plot.cross.lags(data, 'gdp_change', 'ppichg', 16))
+```
+
+## Change in Gold Prices
+
+```{r, message=FALSE, fig.height=10, fig.width=10}
+correlations <- rbind(correlations, plot.cross.lags(data, 'gdp_change', 'goldchg', 16))
+```
+
+## japanchg
+
+```{r, message=FALSE, fig.height=10, fig.width=10}
+correlations <- rbind(correlations, plot.cross.lags(data, 'gdp_change', 'japanchg', 16))
+```
+
+## ukchg
+
+```{r, message=FALSE, fig.height=10, fig.width=10}
+correlations <- rbind(correlations, plot.cross.lags(data, 'gdp_change', 'ukchg', 16))
+```
+
+## Summary Table of Lagged Cross-Correlations
+
+```{r}
+correlations %>% 
+  group_by(variable) %>%
+  summarise(
+    mean_corr = mean(correlation),
+    max_corr = max(correlation)
+    ) %>%
+  arrange(desc(mean_corr))
+```
+
+
+# Subset Data
+
+Subset to primary explanatory variables based on lagged cross-correlations.
+
+```{r}
+#dat <- data %>% dplyr::select(c(gdp_change, nfjobschg, ipichg, treas10yr, fedintrate, cpichg, inventorieschg, ppichg, #popchg, homeownership, corpprofitchg, personincomechg, housingpermitschg))
+
+dat <- data %>% dplyr::select(c(gdp_change, inventorieschg, homeownership, personincomechg, housingpermitschg))
+```
+
+
+## Plot Subset Data
+
+```{r fig.height=15, fig.width=5}
+eda_subset = MultivariateEDA$new(data = dat, var_interest = "gdp_change")
+eda_subset$plot_data(ncol = 1)
+```
+
+
+# VAR Model
+
+```{r}
+end <- 195
+shift <- 2
+
+dat.train <- dat[1:(end - shift), ]
+dat.test <- dat[ (end - shift + 1)  :195, ]
+
+VARselect(dat.train, lag.max = 4, type = "both")
+lsfit=VAR(dat.train, p=4, type="both")
+a = summary(lsfit)
+a$varresult$gdp_change
+AIC(lsfit)
+
+# check residuals on VAR model of gdp_change
+tswgewrapped::evaluate_residuals(residuals(lsfit)[ , 1])
+
+preds.trend <- predict(lsfit, n.ahead = dim(dat.test)[1])
+
+mean( (dat.test$gdp_change - preds.trend$fcst$gdp_change[, 1])^2 )
+
+plot(seq_along(dat.train$gdp_change), dat.train$gdp_change,
+     xlim = c(170, 200), xlab = 'Time (Steps)', ylab = 'Change in GDP', col=c("blue"))
+points(seq(end - shift + 1, 195), dat.test$gdp_change, col=c("blue"))
+points(seq(end - shift + 1, 195), preds.trend$fcst$gdp_change[ , 1], type = 'b', pch = 15, col = c("dark green"))
+abline(v=c(end - shift + 0.5), col=c("red"), lty=c(2), lwd=c(3))
+text(end - shift + 4, 15, 'Validation Set')
+legend("topleft", legend=c("Realization", "Forecast"),
+       col=c("blue", "dark green"), lty=c(F, F), pch = c(1, 15))
+```
+
+
+# Univariate Model
+
+```{r}
+est <- est.arma.wge(dat.train$gdp_change, 13, 1)
+preds <- fore.arma.wge(dat.train$gdp_change, est$phi, est$theta, n.ahead = dim(dat.test)[1], plot = F)
+
+tswgewrapped::evaluate_residuals(est$res)
+
+mean( (dat.test$gdp_change - preds$f)^2 )
+
+plot(seq_along(dat.train$gdp_change), dat.train$gdp_change, 
+     xlim = c(170, 200), xlab = 'Time (Steps)', ylab = 'Change in GDP', col=c("blue"))
+points(seq(end - shift + 1, 195), dat.test$gdp_change, col=c("blue"))
+points(seq(end - shift + 1, 195), preds$f, type = 'b', pch = 15, , col=c("dark green"))
+abline(v=c(end - shift + 0.5), col=c("red"), lty=c(2), lwd=c(3))
+text(end - shift + 4, 15, 'Validation Set')
+legend("topleft", legend=c("Realization", "Forecast"),
+       col=c("blue", "dark green"), lty=c(F, F), pch = c(1, 15))
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

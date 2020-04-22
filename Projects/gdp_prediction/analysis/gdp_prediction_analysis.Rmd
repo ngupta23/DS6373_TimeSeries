@@ -1,0 +1,657 @@
+---
+title: "GDP Prediction"
+author: "Nikhil Gutpa and Stuart Miller"
+date: "`r Sys.time()`"
+output:
+  html_document:
+    toc: yes
+    toc_depth: 6
+    toc_float: yes
+  word_document:
+    toc: yes
+    toc_depth: '6'
+  github_document: 
+    toc: yes
+    toc_depth: 6
+always_allow_html: yes
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+```{r message=FALSE, warning=FALSE}
+# load libraries
+library(tswge)
+library(tswgewrapped)
+library(tidyverse)
+library(ggplot2)
+library(tseries)
+library(kableExtra)
+library(knitr)
+```
+
+# Introduction
+
+Economic recessions are periods of time when an economy shinks.
+These periods of time generally costly to businesses and the populace alike.
+Deep recessions can be particularly costly to the populace as business downsizing and business failures during recessions generally result in a decrease in available jobs (increasing unemployment).
+However, if it was possible to predict a coming recession with some confidence, then it may be possible for business and the populace to prepare and mitigate losses.
+
+We propose to model the change in GDP for the United States to attempt to predict recessions.
+A working definition of a recession is two consecutive quarters of decrease in GDP [1].
+Thus, we will use a 2-step ahead forecast in evaluating models.
+50 quarters of historical data will be used for training models to predict the next 2 quarters.
+
+# Data
+
+All data was collected from [Federal Reserve Economic Data (FRED) Repository](https://fred.stlouisfed.org/),
+which is provided by the Federal Reserve Bank of Saint Louis.
+In addition to quarterly change in GDP, 18 exogenous variables were also collected.
+The data from 151 quarters (from 1982 Q1 to 2019 Q3) were collected.
+The data starts at 1982 Q1 because that was the earliest observation available for `treas10yr3mo`.
+
+The exogenous variables are summerized in the table below.
+
+| Variable | Description | FRED ID |
+|----------|-------------|---------|
+| Date     | Date of observation | N/A |
+| gdp_change | Change in GDP from the previous observation | A191RP1Q027SBEA |
+| unrate   | Unemployment rate | UNRATE |
+| nfjobs   | Non-farming jobs  | PAYEMS | 
+| treas10yr | 10 Year US treasury constant maturity rate | DGS10 |
+| fedintrate | US federal interest rate | FEDFUNDS |
+| personincomechg | Change in real disposable personal income | A067RO1Q156NBEA |
+| cpichg | Change in Consumer Price Index for all urban consumers: all ttems in U.S. city average | CPIAUCNS |
+| popchg | Change in Population | POPTHM |
+| corpprofitchg | Change in Corporate profits after tax (converted to percent change) | CP |
+| crude_wtichg | Change in Spot Crude Oil Price: West Texas Intermediate | WTISPLC |
+| goldchg | Change in Gold Fixing Price 10:30 A.M. (London time) in london bullion market, based in U.S. Dollars | GOLDAMGBD228NLBM |
+| ppichg | Change in Producer price index | PPIACO |
+| japanchg | Change in US/Japan exchange rate | EXJPUS | 
+| ukchg | Change in US/UK exchange rate | EXUSUK |
+| wilshirechg | Change in Wilshire 5000 Total Market Full Cap Index | WILL5000INDFC |
+| ipichg | Change in Industrial Production Index | INDPRO |
+| inventorieschg | Change in Real Manufacturing and Trade Inventories | INVCMRMTSPL |
+| homeownership | Cahnge in Homeownership Rate for the United States | RHORUSQ156N |
+| housingpermitschg | Change in New Private Housing Units Authorized by Building Permits | PERMIT |
+| treas10yr3mo | 10-Year Treasury Constant Maturity Minus 3-Month Treasury Constant Maturity | T10Y3M |
+
+
+```{r}
+# read data set
+data <- read.csv("../data/economic_indicators_all_ex_3mo_china_inc_treas3mo.csv")
+data %>%  glimpse()
+```
+
+```{r}
+# Remove the date column
+data = data %>% dplyr::select(-date)
+```
+
+```{r}
+# global settings
+var_interest = 'gdp_change'
+batch_size = 50
+n.ahead = 2
+```
+
+```{r}
+# split data into a train and test set
+data_train = data %>% dplyr::slice(1:(dplyr::n()-n.ahead))
+data_test = data %>% dplyr::slice((dplyr::n()-n.ahead), dplyr::n())
+```
+
+# Response Variable
+
+The response variable is change in GDP, denoted as `gdp_change`.
+The realization, sample autocorrelations, and Parzen window are shown below.
+The realization appears to express wandering behavior with some oscillation.
+Based on the sample aucorrelations, wandering appears to be the dominate behavior.
+The oscillations do not appear to be expressed strongly in the sample autocorrelations.
+This is consisent with the Parzen window, which shows a dominate frequency at 0.
+The other frequencies shown in the parzen window have very low magnitudes.
+
+```{r, echo=FALSE}
+px = plotts.sample.wge(data_train$gdp_change)
+```
+
+# Modeling
+
+## Stationarity
+
+We start the analysis with an assessment of startionarity of the realization.
+
+```{r, message=FALSE, warning=FALSE, echo=FALSE}
+tswgewrapped::check_stationarity(data_train$gdp_change, ylab = 'Change in GDP', title = 'Realization of Change in GDP')
+```
+
+### Condition 1: Constant Mean
+
+* There does not appear to be evidence of a trend in the data.
+* Additionaly there does not appear to be any kind of deterministic oscillation in the data
+
+Therefore, the assumption of constant mean does not appear to be violated.
+
+### Condition 2: Constant Variance
+
+* There does not apprear to be evidence of the variance of the realization changing over time.
+* the drastic change at time step 75 maybe uncharacterisic of the process generating this realization, but it is difficult to determine with only one realization. This could be normal wandering behavior of the process generating this realization.
+
+Therefore, the assumption of constant variance does not appear to be violated.
+
+### Condition 3: Constant Autocorrelation
+
+The ACF of the first and second half of the realization appear to exhibit similar behavior.
+However, the autocorrelations have very low magnitudes - most of the autocorrelations do not appear to be significantly different than 0.
+
+Therefore, the assumption of constant autocorrelation does not appear to be violated.
+
+### Conclusion
+
+Given the above analysis, there does not appear to be sufficient evidence to suggest that the process generating the realization is not stationary.
+We will continue the ananlysis assuming the process generating the realization is stationary.
+
+## ARMA Model
+
+Since the process generating the realization is assumed to be stationary, we will model this realization with an ARMA model.
+
+### Model ID
+
+```{r, warning=FALSE}
+# get the top five models selected by AIC and BIC
+aicbic.tables <- tswgewrapped::aicbic(data_train$gdp_change, 0:12, 0:3, silent = TRUE)
+```
+
+
+```{r, echo=FALSE}
+# print the aic table
+aicbic.tables[[1]] %>%
+  kable() %>%
+  kable_styling(bootstrap_options = "striped", full_width = F)
+
+# print the bic table
+aicbic.tables[[2]] %>%
+  kable() %>%
+  kable_styling(bootstrap_options = "striped", full_width = F)
+```
+
+Both AIC and BIC select low order models with an ARMA(2, 0) selected as the best ID by both criteria.
+The following models are selected by both criteria:
+
+* ARMA(2, 0)
+* ARMA(1, 1)
+* ARMA(1, 2)
+* ARMA(2, 1)
+
+An ARMA(2,0) was fit based on the model ID from AIC and BIC.
+The factor table for the estimated model does not show roots near the unit circle.
+
+```{r}
+est.s <- est.arma.wge(data_train$gdp_change, 2, 0)
+```
+
+The following factored model is suggested by the MLE fit:
+
+(1-0.7391 $B$ )(1+0.3472 $B$ )( $X_{t}$ - `r mean(data$gdp_change)`) = $a_{t}$ with $\sigma_{a}^2$ = `r est.s$avar`
+
+### Model Fit
+
+```{r results='hide'}
+# setup object with unitvariate model
+models = list("AR(2)" = list(phi = est.s$phi, vara = est.s$avar, res = est.s$res, sliding_ase = TRUE))
+mdl_compare_uni = tswgewrapped::ModelCompareUnivariate$new(data = data_train, var_interest = var_interest, mdl_list = models,
+                                                           n.ahead = n.ahead, batch_size = batch_size)
+```
+
+#### Evaluation of the Residuals
+
+The residuals appear to be nearly consisent with white noise. Some of the autocorrelations of the residuals are marginally significant, but not more than expected. 
+As secondary evaluation, the Ljung-Box test does not reject the null hypothesis that residuals are not white noise.
+
+```{r message=FALSE, echo=FALSE}
+tbl = mdl_compare_uni$evaluate_residuals()
+tbl %>%
+  select(-c(Model)) %>%
+  kable() %>%
+  kable_styling(bootstrap_options = "striped", full_width = F)
+```
+
+#### Model Characterisics
+
+Realizations were simulated from the fit model for comparing realizations, ACFs, and spectral densities to the data.
+
+* The realization simulated from the univariate model appear to have a similar amount of wandering and sharp changes.
+* The ACFs of the simulated realizations appear to exhibit similar behavior through lag 7. After lag 7, one of the ACFs diverge from the other realizations. However the magnitude of the ACFs at these lags is fairly small so it is not a concern.
+* The spectral densitied generally show similar behavior: a peak at or near a frequency of zero with roll-off that ends at about frequency 0.15. One spectral density shows a peak slightly above 0 (about 0.03) with a steaper roll off. However, this spectral density is still exhibiting the same general behavior consistent with the realization.
+
+```{r fig.height=6}
+mdl_compare_uni$plot_multiple_realizations()
+```
+
+### Forecast Results
+
+Generally, the realization is contained in the forecast limits of the model, although the model is unable to capture the sharp changes in the GDP from quarter to quarter. Also, the model is unable to capture the steap dip near time step 100. 
+
+```{r, message=FALSE, warning=FALSE, fig.width = 8}
+# show sliding window forecasts
+tbl <- mdl_compare_uni$plot_batch_forecasts(only_sliding = TRUE)
+```
+
+Viewing the rolling window ASE over time, we see that the most extreme value occurs at the same location as the extreme value of the realization. This is not surprising since an ARMA model will tend toward the mean and this value is far from the window mean.
+
+```{r, message=FALSE, warning=FALSE, fig.width = 8}
+# show ASE over time (windows)
+tbl <- mdl_compare_uni$plot_batch_ases(only_sliding = TRUE)
+```
+
+## VAR Model
+
+### Explanatory Variables
+
+The realizations of the exogeneous variables are shown below.
+
+```{r, fig.width=10, fig.height=10}
+eda <- tswgewrapped::MultivariateEDA$new(data = data_train, var_interest = var_interest)
+eda$plot_data(ncol = 3)
+```
+
+### CCF Analysis
+
+**Summary**
+
+Based on the CCF analysis, we find that very few variables show a strong cross correlation with `gdp_change`. The most significant cross correlation was obtained for `nfjobschg`, `ipichg`, `inventorieschg`, `treas10yr`, `treas3mo` (top 5) and most of the variables showed the max cross correlation at lag = 0. This would mean that it might be benefitial to keep a low lag value in the VAR model (esepcially given that we have many exogenous variables and not a lot of data points).
+
+**NOTE: The CCF Analysis conclusions and values are based on negative lags of the variables with respect to 'gdp_change' only since we wont have the future values to forecast the results.**
+
+```{r, message=FALSE}
+# plot the ccfs and get back the ccf table
+ccf <- eda$plot_ccf_analysis(negative_only = TRUE)
+
+# show the ccf table
+ccf %>%
+  dplyr::select(-c(max_ccf_index_adjusted)) %>%
+  kable() %>%
+  kable_styling(bootstrap_options = "striped", full_width = F)
+```
+
+
+### Modeling
+
+The VAR models selected by the following process.
+
+* BIC was used to select the maximum lag to consider (since we wanted to have a small lag order selection given the large number of exogenous variables and the conclusions from the CCF analysis).
+* The model of the selected lag was fit.
+* In order to reduce the variables further, those variables that were insignificant in the fit were dropped and the maximum lag was reduced further to the maximum significant lag found in the fit. This is a crude variable selection technique. In the future, we will evaluate a better variable selection technique.
+
+```{r, message=FALSE, warning=FALSE}
+# maximum lag to consider in VAR models
+lag.max = 10
+
+# List of VAR models to build for comparison
+models = list("VAR BIC None" = list(select = "bic", trend_type = "none", lag.max = lag.max),
+              "VAR BIC Trend" = list(select = "bic", trend_type = "trend", lag.max = lag.max),
+              "VAR BIC Both" = list(select = "bic", trend_type = "both", lag.max = lag.max))
+
+# instantiate the model build object
+mdl_build_var = tswgewrapped::ModelBuildMultivariateVAR$new(data = data_train, var_interest = var_interest,
+                                                            mdl_list = models, verbose = 0)
+```
+
+The model building process shows that even though we had used lag.max = 10, the p (lag order) selected by VARSelect was 6.
+
+```{r}
+# summarize the the recommended models
+summary_build = mdl_build_var$summarize_build()
+
+summary_build %>% 
+  kable() %>%
+  kable_styling(bootstrap_options = "striped", full_width = F)
+```
+
+```{r}
+# get the recommended models
+mdl_build_var$get_recommendations() %>% 
+  kable() %>%
+  kable_styling(bootstrap_options = "striped", full_width = F)
+```
+
+The above table shows that for the "VAR BIC Both" model, only 4 lagged variables were significant and that too upto a max lag of 3. For the other 2 models, only 2 lagged variables were significant but till a lag of 6. So we will continue to build the recommended models with this reduced set of variables and lags.
+
+
+```{r}
+# build the VAR models
+mdl_build_var$build_recommended_models()
+```
+
+```{r}
+# return the VAR models for comparison
+models = mdl_build_var$get_final_models(subset = 'r')
+
+# Setup Models to be compared with sliding ASE = TRUE
+for (name in names(models)){
+  models[[name]][['sliding_ase']] = TRUE
+}
+```
+
+### Compare the models
+
+```{r}
+# Initialize the ModelCompareMultivariateVAR object
+mdl_compare_var = tswgewrapped::ModelCompareMultivariateVAR$new(data = data_train, var_interest = var_interest,
+                                                                mdl_list = models, n.ahead = n.ahead, batch_size = batch_size, verbose = 1)
+```
+
+Note: 
+
+* If the sliding window is not large enough, we can not build the models with the variables provided. Hence the k values used in the VAR model must be reduced (this is reflected in the Final_K column). If we do run into this issue, the models will most likely not turn out to be good since we wont have enough degrees of freedom to compute the residuals. 
+* In this case however, since we have reduced the variables to be used for model development, we do not run into this issues and Final_K is the same as the value of K (Init_K) recommended by the model build process.
+
+The rolling window forecasts are shown below. The model with trend only (VAR BIC Trend - R) and the model without trend and constant terms (VAR BIC None - R), appear to overshoot the movement of the realization. This is especially true just after the large dip in the realization after time step 100.
+
+```{r, warning=FALSE, message=FALSE, fig.width = 8}
+tbl <- mdl_compare_var$plot_batch_forecasts()
+```
+
+Overall, the model with both trend and constant term (VAR BIC Both - R) appears produce forecasts with lower ASEs on average.
+
+```{r}
+# show distributions of ASEs
+tbl <- mdl_compare_var$plot_boxplot_ases()
+```
+
+Visualizing the realizations over time shows that the model with both trend and constant appears to perform best.
+The large ASEs from the forecasts occur around the sharp dip in the realization just after time step 100.
+
+```{r fig.width=8, warning=FALSE}
+p = mdl_compare_var$plot_batch_ases()
+```
+
+Since the model with both trend and constant terms appears to be the best, we will drop the other two models from further analysis.
+
+```{r, warning=FALSE, message=FALSE}
+mdl_compare_var$keep_models(mdl_names = c("VAR BIC Both - R"))
+```
+
+### Model Fit
+
+An examination of the residuals show that the residuals of the VAR appear to be consistent with white noise.
+The autocorrelations of the residuals appear to be marginally inconsistent with white noise.
+Since these residuals are close to white noise, we will assume the model is sufficient for modeling these data.
+
+```{r, echo=FALSE}
+resids <- resid(models$`VAR BIC Both - R`$varfit)
+tbl <- tswgewrapped::evaluate_residuals(resids[ , 1])
+```
+
+
+## Neural Network Model
+
+### Hyperparameter Grid Search
+
+Since it is sometimes hard to figure out the hyperparameters to be used for the neural network model, we will perform a random grid search over number of repetitions (reps), the number of hidden layers (hd), and whether seasonality should be automatically detected or not (allow.det.season) to figure out the best settings.
+
+```{r, results='hide', warning=FALSE}
+# search for best NN hyperparameters in given grid
+model = tswgewrapped::ModelBuildNNforCaret$new(data = data_train, var_interest = var_interest,
+                                               search = 'random', tuneLength = 5, parallel = TRUE, seed = 1,
+                                               batch_size = batch_size, h = n.ahead, 
+                                               verbose = 1)
+
+```
+
+The ASEs associated with the grid of hyperparameters is shown in the table and heatmap below.
+
+```{r}
+res <- model$summarize_hyperparam_results()
+```
+
+```{r, echo=FALSE}
+res %>%
+  kable() %>%
+  kable_styling(bootstrap_options = "striped", full_width = F)
+```
+
+```{r}
+model$plot_hyperparam_results()
+```
+
+The best hyperparemeters are shown below
+
+```{r}
+best <- model$summarize_best_hyperparams()
+```
+
+```{r, echo=FALSE}
+best %>%
+  kable() %>%
+  kable_styling(bootstrap_options = "striped", full_width = F)
+```
+
+```{r}
+final.ase <- filter(res, reps == best$reps &
+                    hd == best$hd &
+                    allow.det.season == best$allow.det.season)[['ASE']]
+```
+
+The best hyperparameters based on this grid search are `r best$reps` repetitions and `r best$hd` hidden layers, and allow.det.season = `r best$allow.det.season` which has a mean rolling window ASE of `r final.ase`.
+
+```{r}
+# Final Model
+caret_model = model$get_final_models(subset = 'a')
+caret_model$finalModel
+```
+
+```{r}
+# Plot Final Model
+plot(caret_model$finalModel)
+```
+
+### Model Fit
+
+A plot of the residuals shows that the residuals are consistent with white noise with about as many excursions as expected in the ACF plot.
+
+```{r}
+# get back the nnfor mlp model
+model.nnfor <- model$get_final_models(subset = 'r')
+
+# extract the fitted values for white noise evaluation
+values.fitted <- as.numeric(model.nnfor$fitted)
+# find the difference in length between the realization and the fitted values
+size <- length(data_train$gdp_change)
+diff.size <- length(data_train$gdp_change) - length(values.fitted) + 1
+# get the residuals (fitted - realization)
+resids <- values.fitted - data_train$gdp_change[diff.size : size]
+```
+
+```{r warning = FALSE}
+tbl <- tswgewrapped::evaluate_residuals(resids)
+```
+
+### Forecast Results
+
+```{r warning = FALSE}
+# Initialize the ModelCompareNNforCaret object
+mdl_compare_mlp = tswgewrapped::ModelCompareNNforCaret$new(data = data_train, var_interest = var_interest,
+                                                           mdl_list = caret_model,
+                                                           verbose = 0)
+```
+
+## Comparison the best models
+
+```{r}
+newxreg <- data_test %>% dplyr::select(-!!var_interest)
+
+# build compare model object
+mdl_combine = tswgewrapped::ModelCombine$new(data = data_train, 
+                                             var_interest = var_interest,
+                                             uni_models = mdl_compare_uni, 
+                                             var_models = mdl_compare_var, 
+                                             mlp_models = mdl_compare_mlp,
+                                             verbose = 1)
+```
+
+The rolling window ASE distributions for each type of model constructed are shown below.
+Overall, the ARMA(2, 0) model produces forecasts with the least error as the mean and upper IQR line appear to have a lower value than the other two models.
+Each model has a window forecast ASE above a value of 60. These are the forests for the steap dip in the realization after time step 100, indicating that none of the models are forecasting this change.
+
+```{r}
+# plot the distributions of ASE from the rolling windows
+mdl_combine$plot_boxplot_ases()
+```
+
+However, statistically speaking there is no difference in the performance of these models (p-value from ANOVA = 0.503). Hence, we will eventually keep all 3 models in the final ensemble.
+
+```{r}
+comparison = mdl_combine$statistical_compare()
+```
+
+Comparing the rolling window forecasts of each model, we can make several observations.
+The ARMA model appears to be conservative, but generally captures the movement of the realization.
+The VAR model captures the movement of the realization, but wanders away from the realization in some cases.
+The neural network model does not capture the movement of the realization as well as the ARMA model or the VAR model.
+This is particularly evident in the second half of the forecasts where the neural network appears to have a high variance.
+Additionally, all models appear to lag the major dip in the realization after time step 100.
+
+```{r warning = FALSE, fig.width = 8}
+mdl_combine$plot_batch_forecasts()
+```
+
+## Ensemble Models
+
+### Simple Forecasts (Test data)
+```{r}
+p = mdl_combine$plot_simple_forecasts(lastn = FALSE, newxreg = newxreg, zoom = 20) 
+```
+
+Ensembles of the base models are created by combining the forecasts of the base models using a simple linear regression model. In addition 2 naive ensembles were also created which combined the base model forecasts using a mean and a median operator.
+
+### Create the ensemble (glm + naive)
+```{r}
+mdl_combine$create_ensemble()
+```
+
+**Based on the residual and QQ plots, the assumptions for linear regression appear to be reazonably met.**
+
+### Forecasts with Ensemble Models
+
+```{r}
+test_var_interest = data_test[var_interest]
+```
+
+```{r echo=FALSE}
+print("Expected Values")
+print(test_var_interest)
+```
+
+#### Naive with combine = 'median'
+```{r}
+ensemble1 = mdl_combine$predict_ensemble(naive = TRUE, comb = 'median', newxreg = newxreg)
+```
+
+```{r echo=FALSE}
+ensemble1 %>% 
+  kable() %>%
+  kable_styling(bootstrap_options = "striped", full_width = F)
+```
+
+```{r}
+ASE1 = mean((ensemble1$ensemble - test_var_interest$gdp_change)^2)
+```
+
+```{r echo=FALSE}
+cat(paste0("\nThe Test ASE value with the naive median ensemble = ", round(ASE1, 4)))
+```
+
+#### Naive with combine = 'mean'
+```{r}
+ensemble2 = mdl_combine$predict_ensemble(naive = TRUE, comb = 'mean', newxreg = newxreg)
+```
+
+```{r echo=FALSE}
+ensemble2 %>% 
+  kable() %>%
+  kable_styling(bootstrap_options = "striped", full_width = F)
+```
+
+```{r}
+ASE2 = mean((ensemble2$ensemble - test_var_interest$gdp_change)^2)
+```
+
+```{r echo=FALSE}
+cat(paste0("\nThe Test ASE value with the naive mean ensemble = ", round(ASE2, 4)))
+```
+
+#### glm ensemble
+```{r}
+ensemble3 = mdl_combine$predict_ensemble(naive = FALSE, newxreg = newxreg)
+```
+
+```{r echo=FALSE}
+ensemble3 %>% 
+  kable() %>%
+  kable_styling(bootstrap_options = "striped", full_width = F)
+```
+
+```{r}
+ASE3 = mean((ensemble3$ensemble - test_var_interest$gdp_change)^2)
+```
+
+```{r echo=FALSE}
+cat(paste0("\nThe Test ASE value with the glm ensemble = ", round(ASE3, 4)))
+```
+
+```{r}
+ASE_uni = mean((ensemble3$`AR(2)` - test_var_interest$gdp_change)^2)
+ASE_var = mean((ensemble3$`VAR BIC Both - R` - test_var_interest$gdp_change)^2)
+ASE_mlp = mean((ensemble3$reps13_hd1_sdetFALSE - test_var_interest$gdp_change)^2)
+```
+
+```{r echo=FALSE}
+cat(paste0("\nThe Test ASE value with the Univariate AR(2) Model = ", round(ASE_uni, 4)))
+cat(paste0("\nThe Test ASE value with the Multivariate VAR Model = ", round(ASE_var, 4)))
+cat(paste0("\nThe Test ASE value with the Neural Network Model = ", round(ASE_mlp, 4)))
+```
+
+#### Comparing Ensembles
+
+```{r}
+cbind(test_var_interest,
+      ensemble1 %>% dplyr::mutate(ensemble_median = ensemble) %>%  dplyr::select(-ensemble),
+      ensemble2 %>% dplyr::mutate(ensemble_mean = ensemble) %>%  dplyr::select(ensemble_mean),
+      ensemble3 %>% dplyr::mutate(ensemble_glm = ensemble) %>%  dplyr::select(ensemble_glm)) %>%
+  kable() %>%
+  kable_styling(bootstrap_options = "striped", full_width = F)
+```
+
+## Conclusion
+
+* GDP data was very noisy and overall, models are not able to capture variance in this data.
+* The univariate model AR(2) performs better than VAR and MLP models.
+* Ensembles appear to improve forecasts, but further analysis should be performed since our test dataset consisted of only 2 data points. Further validation of the ensembles would be necessary to verify that the ensembles improve the forecasts with sliding window validation (unfortunately, we did not have enough data to perform this analysis).
+* Addition of other exogenous variables with even stronger cross correlations may improve performance of multivariate models.
+
+
+# References
+
+ 1. Jim Chappelow, Recession,  Investopedia. Accessed March 6, 2020. https://www.investopedia.com/terms/r/recession.asp
+ 2. U.S. Bureau of Economic Analysis, Gross Domestic Product [A191RP1Q027SBEA], retrieved from FRED, Federal Reserve Bank of St. Louis; https://fred.stlouisfed.org/series/A191RP1Q027SBEA, March 6, 2020.
+ 3. U.S. Bureau of Labor Statistics, All Employees, Total Nonfarm [PAYEMS], retrieved from FRED, Federal Reserve Bank of St. Louis; https://fred.stlouisfed.org/series/PAYEMS, March 6, 2020.
+ 4. Board of Governors of the Federal Reserve System (US), 10-Year Treasury Constant Maturity Rate [DGS10], retrieved from FRED, Federal Reserve Bank of St. Louis; https://fred.stlouisfed.org/series/DGS10, March 6, 2020.
+ 5. Board of Governors of the Federal Reserve System (US), Effective Federal Funds Rate [FEDFUNDS], retrieved from FRED, Federal Reserve Bank of St. Louis; https://fred.stlouisfed.org/series/FEDFUNDS, March 6, 2020.
+ 6. U.S. Bureau of Economic Analysis, Real Disposable Personal Income [A067RO1Q156NBEA], retrieved from FRED, Federal Reserve Bank of St. Louis; https://fred.stlouisfed.org/series/A067RO1Q156NBEA, March 6, 2020.
+ 7. U.S. Bureau of Labor Statistics, Consumer Price Index for All Urban Consumers: All Items in U.S. City Average [CPIAUCNS], retrieved from FRED, Federal Reserve Bank of St. Louis; https://fred.stlouisfed.org/series/CPIAUCNS, March 6, 2020.
+ 8. U.S. Bureau of Economic Analysis, Population [POPTHM], retrieved from FRED, Federal Reserve Bank of St. Louis; https://fred.stlouisfed.org/series/POPTHM, March 6, 2020.
+ 9. U.S. Bureau of Economic Analysis, Corporate Profits After Tax (without IVA and CCAdj) [CP], retrieved from FRED, Federal Reserve Bank of St. Louis; https://fred.stlouisfed.org/series/CP, March 6, 2020.
+ 10. Federal Reserve Bank of St. Louis, Spot Crude Oil Price: West Texas Intermediate (WTI) [WTISPLC], retrieved from FRED, Federal Reserve Bank of St. Louis; https://fred.stlouisfed.org/series/WTISPLC, March 6, 2020.
+ 11. ICE Benchmark Administration Limited (IBA), Gold Fixing Price 10:30 A.M. (London time) in London Bullion Market, based in U.S. Dollars [GOLDAMGBD228NLBM], retrieved from FRED, Federal Reserve Bank of St. Louis; https://fred.stlouisfed.org/series/GOLDAMGBD228NLBM, March 6, 2020.
+ 12. Board of Governors of the Federal Reserve System (US), Japan / U.S. Foreign Exchange Rate [EXJPUS], retrieved from FRED, Federal Reserve Bank of St. Louis; https://fred.stlouisfed.org/series/EXJPUS, March 6, 2020.
+ 13. Board of Governors of the Federal Reserve System (US), U.S. / U.K. Foreign Exchange Rate [EXUSUK], retrieved from FRED, Federal Reserve Bank of St. Louis; https://fred.stlouisfed.org/series/EXUSUK, March 6, 2020.
+ 14. Wilshire Associates, Wilshire 5000 Total Market Full Cap Index [WILL5000INDFC], retrieved from FRED, Federal Reserve Bank of St. Louis; https://fred.stlouisfed.org/series/WILL5000INDFC, March 26, 2020.
+ 15. Federal Reserve Bank of St. Louis, Real Manufacturing and Trade Inventories [INVCMRMTSPL], retrieved from FRED, Federal Reserve Bank of St. Louis; https://fred.stlouisfed.org/series/INVCMRMTSPL, March 26, 2020.
+ 16. U.S. Census Bureau and U.S. Department of Housing and Urban Development, New Private Housing Units Authorized by Building Permits [PERMIT], retrieved from FRED, Federal Reserve Bank of St. Louis; https://fred.stlouisfed.org/series/PERMIT, March 26, 2020.
+ 17. U.S. Census Bureau, Homeownership Rate for the United States [RHORUSQ156N], retrieved from FRED, Federal Reserve Bank of St. Louis; https://fred.stlouisfed.org/series/RHORUSQ156N, March 26, 2020.
+ 18. Board of Governors of the Federal Reserve System (US), Industrial Production Index [INDPRO], retrieved from FRED, Federal Reserve Bank of St. Louis; https://fred.stlouisfed.org/series/INDPRO, March 26, 2020.
+ 19. Federal Reserve Bank of St. Louis, 10-Year Treasury Constant Maturity Minus 3-Month Treasury Constant Maturity [T10Y3M], retrieved from FRED, Federal Reserve Bank of St. Louis; https://fred.stlouisfed.org/series/T10Y3M, March 26, 2020.
+

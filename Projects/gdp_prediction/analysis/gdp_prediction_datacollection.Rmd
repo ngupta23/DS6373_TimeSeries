@@ -1,0 +1,484 @@
+---
+title: "GDP Prediction"
+author: "Nikhil Gupta"
+date: "`r Sys.time()`"
+output:
+  github_document:
+    toc: yes
+    toc_depth: 6
+  html_document:
+    toc: yes
+    toc_depth: 6
+    toc_float: yes
+  word_document:
+    toc: yes
+    toc_depth: '6'
+always_allow_html: yes
+---
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+# Setup
+```{r}
+library(tswge)
+library(tidyverse)
+library(tidyquant)
+library(skimr)
+library(plyr)
+library(ggplot2)
+source("common_functions_tq.R")
+```
+
+
+```{r}
+from = "1970-01-01"
+to = "2019-09-30"
+```
+
+# GDP Growth (Seasonally Adjusted)
+
+```{r}
+ID = "A191RP1Q027SBEA"
+data = tqw_get_fred(ID = ID, from = from, to = to)
+data %>% glimpse()
+```
+
+
+```{r}
+data = data %>%    
+    tq_transmute(mutate_fun = to.period,
+                 period = "quarters", 
+                 col_rename = "gdp_change")
+data %>% glimpse()
+```
+
+```{r}
+data %>%
+    ggplot(aes(x = date, y = gdp_change)) +
+    geom_line() +
+    #labs(title = title, y = y_label, x = x_label) + 
+    theme_tq()
+```
+
+```{r}
+px = plotts.sample.wge(data$gdp_change, lag.max = 40)
+```
+
+## Observations
+
+* Looks like there are several peaks, but if we note carefully, the magnitude is less than 0.
+* Peak at f = 0 is the most appreciable --> so this could come from an ARMA, ARIMA (no seasonality) or an ARIMA (with seasonality model)
+* ACF's have not died down even after lag of at least 32 (8 years!!) --> some indication of extended autocorrelations pointing to a ARIMA model  (--> this is using older data)
+
+Let's see various fits to see.
+
+## Fits
+
+### Pure ARMA fit
+
+```{r}
+grid = aic5.wge(data$gdp_change)
+grid 
+```
+
+```{r}
+arma_fit = aic.wge(data$gdp_change)
+
+factor.wge(phi = arma_fit$phi)
+factor.wge(phi = arma_fit$theta)
+```
+
+#### Observations
+* This solves a lot of the open questions
+* The factor table for the fitted phi's shows that the value of the dominant root is very close to 1 hence the realization is displaying ARIMA type of properties.
+
+### ARIMA (no seasonality)
+
+```{r}
+results = tribble(~d, ~best_p, ~best_q, ~best_aic)
+
+
+data_diff = artrans.wge(data$gdp_change, phi.tr = 1, plottr = TRUE)
+# px = plotts.sample.wge(data_no_season)
+grid = aic5.wge(data_diff)
+best_aic = grid$`       aic`[1]
+best_p = grid$`   p`[1]
+best_q = grid$`   q`[1]
+  
+results = results %>% 
+  add_row(d = 1, best_p = best_p, best_q = best_q, best_aic = best_aic)
+
+results %>% 
+  arrange(best_aic)
+```
+
+```{r}
+px = plotts.sample.wge(data_diff)
+arima_fit = aic.wge(data_diff)
+
+if (arima_fit$p != 0){ factor.wge(phi = arima_fit$phi)   }
+if (arima_fit$q != 0){ factor.wge(phi = arima_fit$theta) }
+```
+
+
+#### Observations
+* Best AIC is for ARIMA(0,1,2) with s = 0. 
+* Best AIC = 2.444 which is very close to the pure ARMA model since that has a dominant root very close to 1 anyway.
+
+### ARIMA with d = 0 and Seasonality != 0
+```{r}
+
+results = tribble(~seasonality, ~best_p, ~best_q, ~best_aic)
+
+for (s in 2:12){
+  # Note when s = 1, this returns a ARIMA model with d = 1 and no seasonality
+  # For s > 1, this returns a ARIMA model with d = 0 and seasonality = s
+  data_no_season = artrans.wge(data$gdp_change, phi.tr = c(rep(0, s-1),1), plottr = TRUE)
+  # px = plotts.sample.wge(data_no_season)
+  grid = aic5.wge(data_no_season)
+  best_aic = grid$`       aic`[1]
+  best_p = grid$`   p`[1]
+  best_q = grid$`   q`[1]
+  
+  results = results %>% 
+    add_row(seasonality = s, best_p = best_p, best_q = best_q, best_aic = best_aic)
+}
+
+results %>% 
+  arrange(best_aic)
+```
+
+#### Observations
+* Best Model including Seasonality is ARIMA(5,0,2) with s = 2
+* However, this is not as good as the pure ARMA model or the ARIMA with no seasonality model.
+* We will exclude this from the final consideration.
+ 
+ 
+## Predictions
+
+```{r}
+n.ahead = 4
+
+compute_ase = function(data, forecast, n.ahead){
+  n = length(data)
+  ase = mean((data[(n-n.ahead+1):n] - forecast$f)^2)
+  return(ase)
+}
+
+results = tribble(~model, ~ase)
+```
+
+### Pure ARMA
+
+```{r}
+model = "ARMA"
+fore_arma = fore.arma.wge(data$gdp_change, phi = arma_fit$phi, theta = arma_fit$theta, n.ahead = n.ahead, lastn = TRUE)
+ase_arma = compute_ase(data = data$gdp_change, forecast = fore_arma, n.ahead = n.ahead)
+
+results = results %>% 
+    add_row(model = model, ase = ase_arma)
+
+
+```
+
+### ARIMA()
+```{r}
+model = "ARIMA"
+fore_arima = fore.aruma.wge(data$gdp_change, phi = arima_fit$phi, theta = arima_fit$theta, n.ahead = n.ahead, lastn = TRUE) 
+ase_arima = compute_ase(data = data$gdp_change, forecast = fore_arima, n.ahead = n.ahead)
+
+results = results %>% 
+    add_row(model = model, ase = ase_arima)
+```
+
+```{r}
+results
+```
+
+
+# Conclusion
+
+* ARMA(2,1) and ARIMA(0,1,2) seem to give similar results based on AIC
+* However, ARIMA fails terribly at predicton and the ASE is huge especially for immediate predictons.
+* Hence we would recommend using the ARMA model in this case.
+* This model only takes 'time' into consideration while building the model. There may be other exogenous variables that may impact GDP which we have not considered at all. We will do that next with VAR models and Neural Networks.
+
+# Collecting more correlated data
+
+```{r}
+aggregate.period = "quarters"
+index.at = "yearqtr"
+from = "1900-01-01"  ## Going to increase the horizon since we need more data for NN models
+to = "2019-09-30"
+```
+
+
+## GDP
+
+```{r}
+gdp_change = get_format_tq(ID = "A191RP1Q027SBEA", from = from, to = to, col_rename = 'gdp_change', return = FALSE)
+```
+
+
+
+## LABOR MARKET
+### Unemployment Rate
+
+```{r}
+unrate = get_format_tq(ID = "UNRATE", from = from, to = to, col_rename = 'unrate', return = FALSE)
+```
+
+### Non Farm Jobs (Seasonally Adjusted)
+
+```{r}
+nfjobschg = get_format_tq(ID = "PAYEMS", from = from, to = to, col_rename = 'nfjobschg', return = TRUE)
+```
+
+## MONITORY POLICY
+### 10 yr Treasury Rate
+```{r}
+treas10yr = get_format_tq(ID = "DGS10", from = from, to = to, col_rename = 'treas10yr', return = FALSE)
+```
+
+### 3 mo Treasury Rate
+```{r}
+treas3mo = get_format_tq(ID = "DGS3MO", from = from, to = to, col_rename = 'treas3mo', return = FALSE)
+```
+
+### 10yr - 3mo Treasury
+```{r}
+treas10yr3mo = get_format_tq(ID = "T10Y3M", from = from, to = to, col_rename = 'treas10yr3mo', return = FALSE)
+```
+
+
+### Federal Funds Interest Rate 
+
+```{r}
+fedintrate = get_format_tq(ID = "FEDFUNDS", from = from, to = to, col_rename = 'fedintrate', return = FALSE)
+```
+
+### 3 month LIBOR
+```{r}
+libor3mo = get_format_tq(ID = "USD3MTD156N", from = from, to = to, col_rename = 'libor3mo', return = FALSE)
+```
+
+
+## CONSUMER RELATED
+### Real Disposable Personal Income Change
+
+```{r}
+personincomechg = get_format_tq(ID = "A067RO1Q156NBEA", from = from, to = to, col_rename = 'personincomechg', return = FALSE)
+```
+
+
+### Consumer Price Index (inflation)
+
+```{r}
+cpichg = get_format_tq(ID = "CPIAUCNS", from = from, to = to, col_rename = 'cpichg', return = TRUE)
+```
+
+
+### Population
+
+```{r}
+popchg = get_format_tq(ID = "POPTHM", from = from, to = to, col_rename = 'popchg', return = TRUE)
+```
+
+## HOUSING RELATED
+### Permits
+```{r}
+housingpermitschg = get_format_tq(ID = "PERMIT", from = from, to = to, col_rename = 'housingpermitschg', return = TRUE)
+```
+
+### Housing Price Index
+```{r}
+hpichg = get_format_tq(ID = "USSTHPI", from = from, to = to, col_rename = 'hpichg', return = TRUE)
+```
+
+### Home Ownership
+```{r}
+homeownership = get_format_tq(ID = "RHORUSQ156N", from = from, to = to, col_rename = 'homeownership', return = FALSE)
+```
+
+
+## BUSINESS ENVIRONMENT
+### Corporate Profits
+
+```{r}
+corpprofitchg = get_format_tq(ID = "CP", from = from, to = to, col_rename = 'corpprofitchg', return = TRUE)
+```
+
+### Inventories
+
+```{r}
+inventorieschg = get_format_tq(ID = "INVCMRMTSPL", from = from, to = to, col_rename = 'inventorieschg', return = TRUE)
+```
+
+
+
+### Domestic Investments
+
+```{r}
+## Gives issues with conversion to to % change
+# investment = get_format_tq(ID = "W790RC1Q027SBEA", from = from, to = to, col_rename = 'investment', return = FALSE)
+# investmentchg = get_format_tq(ID = "W790RC1Q027SBEA", from = from, to = to, col_rename = 'investmentchg', return = TRUE)
+```
+
+### Crude Oil
+
+```{r}
+crude_wtichg = get_format_tq(ID = "WTISPLC", from = from, to = to, col_rename = 'crude_wtichg', return = TRUE)
+```
+
+### Producer Price Index
+
+```{r}
+ppichg = get_format_tq(ID = "PPIACO", from = from, to = to, col_rename = 'ppichg', return = TRUE)
+```
+
+### Industrial Production Index
+```{r}
+ipichg = get_format_tq(ID = "INDPRO", from = from, to = to, col_rename = 'ipichg', return = TRUE)
+```
+
+## STOCK MARKER
+### Willshire 5000
+
+```{r}
+wilshirechg = get_format_tq(ID = "WILL5000INDFC", from = from, to = to, col_rename = 'wilshirechg', return = TRUE)
+```
+
+## MACRO ECONOMIC FACTORS
+
+### Gold
+
+```{r}
+goldchg = get_format_tq(ID = "GOLDAMGBD228NLBM", from = from, to = to, col_rename = 'goldchg', return = TRUE)
+```
+
+
+### Exchange Rate
+
+#### China
+
+```{r}
+chinachg = get_format_tq(ID = "EXCHUS", from = from, to = to, col_rename = 'chinachg', return = TRUE)
+```
+
+
+#### Japan
+
+```{r}
+japanchg = get_format_tq(ID = "EXJPUS", from = from, to = to, col_rename = 'japanchg', return = TRUE)
+```
+
+
+#### UK
+
+```{r}
+ukchg = get_format_tq(ID = "EXUSUK", from = from, to = to, col_rename = 'ukchg', return = TRUE)
+```
+
+# Merge Data
+
+```{r}
+dfs = list(gdp_change = gdp_change,
+           labor_unrate = unrate,
+           labor_nfjobschg = nfjobschg,
+           monitory_treas10yr = treas10yr,
+           monitory_treas3mo = treas3mo,
+           monitory_treas10yr3mo = treas10yr3mo,
+           monitory_fedintrate = fedintrate,
+           # monitory_libor3mo = libor3mo,
+           consumer_personincomechg = personincomechg,
+           consumer_cpichg = cpichg,
+           consumer_popchg = popchg,
+           housing_housingpermitschg = housingpermitschg,
+           # housing_hpichg = hpichg,
+           housing_homeownership = homeownership,
+           business_corpprofitchg = corpprofitchg,
+           business_inventorieschg = inventorieschg,
+           business_crude_wtichg = crude_wtichg,
+           business_ppichg = ppichg,
+           business_ipichg = ipichg,
+           stock_wilshirechg = wilshirechg,
+           macro_goldchg = goldchg,
+           macro_exc_japanchg = japanchg,
+           # macro_exc_chinachg = chinachg,
+           macro_exc_ukchg = ukchg
+           )
+
+for (i in 1:length(dfs)){
+  print(paste0("Number of observations in ", names(dfs[i]), " = ", nrow(dfs[[i]])))
+}
+
+# We may want to remove some of these variables if that is reducing the number of observations 
+# and is already highly correlated to other features. Example: libor3mo is related to fedintrate
+```
+
+```{r}
+data = join_all(dfs, by='date', type='full') %>% 
+  arrange(date) %>% 
+  drop_na()
+  
+data %>% glimpse()
+data %>% skim()
+
+head(data)
+tail(data)
+```
+
+
+* But wait. We need to predict the GDP in the future quarters using data available in this quarter.
+* So we may need to change the gdp column to a lagged gdp column (for next quarter). We will evaluate how to do this.
+
+```{r}
+write.csv(data, "../data/economic_indicators_all_ex_3mo_china_inc_treas3mo.csv", row.names = FALSE)
+```
+
+# TODO
+
+## Questions for Dr. Sadler
+
+1. Some data is quarterly and some if monthly. How do we not lose the monthly granularity and still use the quarterly data? Is this still possible, since our output (GDP) is measured quarterly, i.e. our can we predict quarterly data using monthly frequency of certain variables?
+2. If we expect certain predictors to themselves be non-stationary (such as $ corporate profits), should we convert this to a stationary signal such as % change from las period?
+3. When collecting the data (predictors), some are seasonally adjusted and some are not. If we have a choice, which one should we pick? Does it matter?
+
+## Things to Consider
+
+1. Consider removing the data related to the 3mo Treasury Rate (since it only has 137 quarterly observations) and China Exchange Rate (it only has < 160 quarterly observations and also this data was controlled artificially for a while). If we remove these we can increase our dataset to close to 200 observations (almost 50% increase).
+
+
+## Data Collection
+1. See if the value used during the resampling can be converted to the median value during that period.
+
+* https://cran.r-project.org/web/packages/tidyquant/vignettes/TQ02-quant-integrations-in-tidyquant.html#example-2-use-xts-to.period-to-change-the-periodicity-from-daily-to-monthly
+
+```
+unrate2 = unrate %>%    
+    tq_transmute(mutate_fun = apply.quarterly,
+                 indexAt = index.at,
+                 FUN = median,
+                 col_rename = "unrate") %>% 
+    mutate(date = paste0(year(date), " Q", quarter(date))) 
+# Need to convert date to type 'datetime'
+
+unrate2 %>% glimpse()
+```
+
+## EDA
+1. Plot correlation plots with lagged variables to gain insight into what features might be useful predictors.
+
+## Model Analysis
+1. If I take GDP data from way back (1946), the resultsfor ARMA and ARIMA analysis are very different (spectral densities, etc). So, while fitting, should we not do something like 5 fold cross validation?
+2. Use Rolling Window to calculate the ASE inistead of just the last n values. This will give a more robust estimate.
+
+
+```{r}
+
+
+```
