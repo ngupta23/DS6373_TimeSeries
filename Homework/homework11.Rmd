@@ -58,7 +58,7 @@ models = list("Model 1" = list(phi = e$phi, theta = e$theta, vara = e$avar, res 
 
 n.ahead = 20
 
-mdl_compare = tswgewrapped::ModelCompareUnivariate$new(x = xa, mdl_list = models, n.ahead = n.ahead)
+mdl_compare = tswgewrapped::ModelCompareUnivariate$new(data = xa, mdl_list = models, n.ahead = n.ahead)
 ```
 
 ```{r}
@@ -75,7 +75,7 @@ px = plotts.sample.wge(xa)
 
 ### c
 ```{r}
-mdl_compare$plot_simple_forecasts(lastn = TRUE, limits = TRUE)
+p = mdl_compare$plot_simple_forecasts(lastn = TRUE, limits = TRUE)
 ```
 
 * Model forecasts settle down pretty quickly to mean so they may not do such a good job at long term forecasting
@@ -116,7 +116,7 @@ mean(xb)
 models = list("Model 2" = list(phi = e$phi, theta = e$theta, vara = e$avar, res = e$res, sliding_ase = FALSE))
 n.ahead = 20
 
-mdl_compare = tswgewrapped::ModelCompareUnivariate$new(x = xb, mdl_list = models, n.ahead = n.ahead)
+mdl_compare = tswgewrapped::ModelCompareUnivariate$new(data = xb, mdl_list = models, n.ahead = n.ahead)
 ```
 
 ```{r}
@@ -133,7 +133,7 @@ px = plotts.sample.wge(xb)
 
 ### c
 ```{r}
-mdl_compare$plot_simple_forecasts(lastn = TRUE, limits = TRUE)
+p = mdl_compare$plot_simple_forecasts(lastn = TRUE, limits = TRUE)
 ```
 
 * Model forecasts do a pretty good job of forecasting last 20 values
@@ -176,7 +176,7 @@ mean(xa)
 models = list("Model 3" = list(phi = e$phi, theta = e$theta, vara = e$avar, res = e$res, sliding_ase = FALSE))
 n.ahead = 20
 
-mdl_compare = tswgewrapped::ModelCompareUnivariate$new(x = xc, mdl_list = models, n.ahead = n.ahead)
+mdl_compare = tswgewrapped::ModelCompareUnivariate$new(data = xc, mdl_list = models, n.ahead = n.ahead)
 ```
 
 ```{r}
@@ -193,7 +193,7 @@ px = plotts.sample.wge(xc)
 
 ### c
 ```{r}
-mdl_compare$plot_simple_forecasts(lastn = TRUE, limits = TRUE)
+p = mdl_compare$plot_simple_forecasts(lastn = TRUE, limits = TRUE)
 ```
 
 * Model forecasts settle down pretty quickly to mean so they may not do such a good job at long term forecasting
@@ -237,7 +237,7 @@ mean(x)
 models = list("Model 1" = list(phi = e$phi, theta = e$theta, vara = e$avar, res = e$res, sliding_ase = FALSE))
 n.ahead = 20
 
-mdl_compare = tswgewrapped::ModelCompareUnivariate$new(x = x, mdl_list = models, n.ahead = n.ahead)
+mdl_compare = tswgewrapped::ModelCompareUnivariate$new(data = x, mdl_list = models, n.ahead = n.ahead)
 ```
 
 ```{r}
@@ -255,7 +255,7 @@ px = plotts.sample.wge(x)
 
 ### c
 ```{r}
-mdl_compare$plot_simple_forecasts(lastn = TRUE, limits = TRUE)
+p = mdl_compare$plot_simple_forecasts(lastn = TRUE, limits = TRUE)
 f = fore.arma.wge(x, phi = e$phi, theta = e$theta, n.ahead = 10, lastn = TRUE)
 ```
 
@@ -299,7 +299,7 @@ mean(x)
 models = list("Model 1" = list(phi = e$phi, theta = e$theta, vara = e$avar, res = e$res, sliding_ase = FALSE))
 n.ahead = 20
 
-mdl_compare = tswgewrapped::ModelCompareUnivariate$new(x = x, mdl_list = models, n.ahead = n.ahead)
+mdl_compare = tswgewrapped::ModelCompareUnivariate$new(data = x, mdl_list = models, n.ahead = n.ahead)
 ```
 
 ```{r}
@@ -319,7 +319,7 @@ px = plotts.sample.wge(x)
 
 ### c
 ```{r}
-mdl_compare$plot_simple_forecasts(lastn = TRUE, limits = TRUE)
+p = mdl_compare$plot_simple_forecasts(lastn = TRUE, limits = TRUE)
 f = fore.arma.wge(x, phi = e$phi, theta = e$theta, n.ahead = 10, lastn = TRUE)
 ```
 
@@ -363,7 +363,7 @@ mean(x)
 models = list("Model 1" = list(phi = e$phi, theta = e$theta, vara = e$avar, res = e$res, sliding_ase = FALSE))
 n.ahead = 20
 
-mdl_compare = tswgewrapped::ModelCompareUnivariate$new(x = x, mdl_list = models, n.ahead = n.ahead)
+mdl_compare = tswgewrapped::ModelCompareUnivariate$new(data = x, mdl_list = models, n.ahead = n.ahead)
 ```
 
 ```{r}
@@ -381,7 +381,7 @@ px = plotts.sample.wge(x)
 
 ### c
 ```{r}
-mdl_compare$plot_simple_forecasts(lastn = TRUE, limits = TRUE)
+p = mdl_compare$plot_simple_forecasts(lastn = TRUE, limits = TRUE)
 f = fore.arma.wge(x, phi = e$phi, theta = e$theta, n.ahead = 10, lastn = TRUE)
 ```
 
@@ -453,7 +453,7 @@ mean(x)
 models = list("Model 1" = list(d = d, s = s, phi = e$phi, theta = e$theta, vara = e$avar, res = e$res, sliding_ase = FALSE))
 n.ahead = 20
 
-mdl_compare = tswgewrapped::ModelCompareUnivariate$new(x = x, mdl_list = models, n.ahead = n.ahead)
+mdl_compare = tswgewrapped::ModelCompareUnivariate$new(data = x, mdl_list = models, n.ahead = n.ahead)
 ```
 
 ```{r}
@@ -474,7 +474,7 @@ px = plotts.sample.wge(x)
 
 ### c
 ```{r}
-mdl_compare$plot_simple_forecasts(lastn = TRUE, limits = FALSE)
+p = mdl_compare$plot_simple_forecasts(lastn = TRUE, limits = FALSE)
 f = fore.aruma.wge(x, d = d, s = s, phi = e$phi, theta = e$theta, n.ahead = 10, lastn = TRUE, limits = FALSE)
 ```
 

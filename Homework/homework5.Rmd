@@ -276,6 +276,32 @@ print(acf2$acf)
 
 ```
 
+### Alternate Method
+
+```{r}
+theta = c(2, -1.5)
+factor.wge(phi = theta)
+
+acf1 = plotts.true.wge(theta = theta)
+
+# Original Roots
+root1_org = complex(real = 0.6667, imaginary = 0.4714)
+root2_org = complex(real = 0.6667, imaginary = -0.4714)
+
+theta1 = as.numeric(root1_org + root2_org)  # Take the real part by using as.numeric since img part of sum = 0
+theta2 = -(abs(root1_org))^2 # Note the – sign here
+
+new_theta = c(theta1, theta2)
+
+factor.wge(phi = new_theta)
+acf2 = plotts.true.wge(theta = new_theta)
+
+print(paste0("Are the ACFs for the 2 models equal: ", all(round(acf1$aut1,3) == round(acf2$aut1,3))))
+print(acf1$aut1)
+print(acf2$aut1)
+
+
+```
 
 
 # 3.11

@@ -100,6 +100,8 @@ p_0.9m$acv[1]
 p_0.5$acv[1]
 p_0.5m$acv[1]
 
+ 
+
 # Note that the below is the variance of the mean not the sigma_x for the realixation
 # calculate_ts_var_of_mean(x_0.9)
 # calculate_ts_var_of_mean(x_0.9m)

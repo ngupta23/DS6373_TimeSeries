@@ -149,7 +149,7 @@ phi = c(1.2, -0.8)
 x = gen.aruma.wge(n = 200, phi = phi, d = 0, s = 4)
 ```
 
-This has even more wandering compared to 'b'. This is a non-stationary model and does not have a seasonal component.
+This is a non-stationary model and has a seasonal component.
 
 ## d
 ```{r}
@@ -224,12 +224,16 @@ factor.wge(phi = theta)
 * q = 2
 * ARUMA(1,5,2)
 
+This can also be a ARIMA(1,1,2) with s = 4
+
 # 5.7
 
 ## a
 ```{r}
-phi = c(rep(0,5),1)
-factor.wge(phi = phi)
+# phi = c(rep(0,5),1)
+# factor.wge(phi = phi)
+
+factor.wge.season(6)
 ```
 
 ## b
